@@ -31,14 +31,20 @@ export interface LayoutProps {
   children?: Child
 }
 
-type NavEntry = { key: Exclude<NavKey, null>; href: string; label: string }
+type NavEntry = {
+  key: Exclude<NavKey, null>
+  href: string
+  label: string
+  /** Shown instead of the label where the phone row is too narrow; the label stays the name. */
+  short?: string
+}
 
 const NAV: NavEntry[] = [
   { key: 'top', href: '/', label: 'Top' },
   { key: 'new', href: '/newest', label: 'New' },
   { key: 'posts', href: '/posts', label: 'Posts' },
   { key: 'status', href: '/status', label: 'Status' },
-  { key: 'tree', href: '/tree', label: 'Tree' },
+  { key: 'tree', href: '/tree', label: 'Invite tree', short: 'Tree' },
 ]
 
 const MEMBER_NAV: NavEntry = { key: 'replies', href: '/replies', label: 'Replies' }
@@ -137,7 +143,16 @@ export function Layout(props: LayoutProps) {
                 {nav.map((item) => (
                   <li>
                     <a href={item.href} aria-current={props.nav === item.key ? 'page' : undefined}>
-                      {item.label}
+                      {item.short ? (
+                        <>
+                          <span class="bar__nav-long">{item.label}</span>
+                          <span class="bar__nav-short" aria-hidden="true">
+                            {item.short}
+                          </span>
+                        </>
+                      ) : (
+                        item.label
+                      )}
                     </a>
                   </li>
                 ))}

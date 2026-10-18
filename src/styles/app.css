@@ -141,11 +141,11 @@ main:has(> .discussion:last-child) {
   }
 
   .bar__nav ul {
-    gap: 0 var(--space-5);
+    gap: 0 var(--space-4);
   }
 
   /* Five links signed out, six for members, seven for moderators; they still fit one row at
-     360px. */
+     360px ("Invite tree" turns into "Tree" below, where it would not). */
   .bar__nav ul:has(> li:nth-child(6)) {
     gap: 0 var(--space-3);
   }
@@ -156,6 +156,58 @@ main:has(> .discussion:last-child) {
 
   .bar__nav a {
     padding-block: var(--space-2) var(--space-3);
+  }
+}
+
+/* "Invite tree" says "Tree" where the phone row is too narrow for it: from the widths measured in
+ * docs/design-plan.md, per number of links. The full name stays in the link, visually hidden, so
+ * the link's name is "Invite tree" at every width; the short word is aria-hidden. */
+.bar__nav-short {
+  display: none;
+}
+
+@media (width < 21rem) {
+  .bar__nav .bar__nav-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .bar__nav .bar__nav-short {
+    display: inline;
+  }
+}
+
+@media (width < 24.25rem) {
+  .bar__nav ul:has(> li:nth-child(6)) .bar__nav-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .bar__nav ul:has(> li:nth-child(6)) .bar__nav-short {
+    display: inline;
+  }
+}
+
+@media (width < 25.5rem) {
+  .bar__nav ul:has(> li:nth-child(7)) .bar__nav-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .bar__nav ul:has(> li:nth-child(7)) .bar__nav-short {
+    display: inline;
   }
 }
 
