@@ -93,6 +93,7 @@ export function profileJsonLd(origin: string, user: UserProfile): Json {
       alternateName: user.login,
       identifier: user.login,
       url: `${origin}/u/${user.login}`,
+      sameAs: [`https://github.com/${user.login}`],
       ...(user.bioHtml ? { description: htmlToText(user.bioHtml) } : {}),
       interactionStatistic: [
         {

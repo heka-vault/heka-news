@@ -172,6 +172,14 @@ export function UserPage(props: {
               <dd>{longDate(user.createdAt)}</dd>
             </div>
             <div>
+              <dt>GitHub</dt>
+              <dd>
+                <a href={`https://github.com/${user.login}`} rel="me noopener" translate="no">
+                  github.com/{user.login}
+                </a>
+              </dd>
+            </div>
+            <div>
               <dt>Invited by</dt>
               <dd>
                 {user.invitedBy ? (
