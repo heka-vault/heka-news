@@ -96,6 +96,29 @@ export function inviteTree(db: Db): TreeNode[] {
 }
 
 /**
+ * A member's branch: the line of members who invited them, from a founding member down (not
+ * including them), and their own node with everyone who joined through them. Null when the login
+ * is not in the tree. Logins are compared exactly; resolve case first with `getProfile`.
+ */
+export function findBranch(
+  roots: TreeNode[],
+  login: string,
+): { line: TreeNode[]; node: TreeNode } | null {
+  const walk = (
+    nodes: TreeNode[],
+    line: TreeNode[],
+  ): { line: TreeNode[]; node: TreeNode } | null => {
+    for (const node of nodes) {
+      if (node.login === login) return { line, node }
+      const found = walk(node.children, [...line, node])
+      if (found) return found
+    }
+    return null
+  }
+  return walk(roots, [])
+}
+
+/**
  * The invite tree in brief, for the front page: how many members, how long the longest chain of
  * invitations is, and the newest `limit` members (not banned) with who invited them.
  */

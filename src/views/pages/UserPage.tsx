@@ -195,6 +195,12 @@ export function UserPage(props: {
               </dd>
             </div>
             <div>
+              <dt>Invite tree</dt>
+              <dd>
+                <a href={`/tree/${user.login}`}>{self ? 'Your branch' : 'Their branch'}</a>
+              </dd>
+            </div>
+            <div>
               <dt>Wrote</dt>
               <dd>
                 {plural(user.itemCount, 'item')}, {plural(user.commentCount, 'comment')}

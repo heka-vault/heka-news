@@ -999,6 +999,66 @@ main:has(> .discussion:last-child) {
   white-space: nowrap;
 }
 
+/* --- One member's branch: the line above them, then the tree below ----------------------------- */
+
+.tree-line {
+  margin-block: 0 var(--space-5);
+  font-family: var(--font-display);
+}
+
+.tree-line__title {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tree-line__note {
+  margin: 0;
+  font-size: var(--text-ui);
+}
+
+.tree-line__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-ui);
+}
+
+.tree-line__list a {
+  display: inline-block;
+  padding-block: 0.1875rem;
+  overflow-wrap: anywhere;
+}
+
+.tree-line__list [aria-current] {
+  padding-block: 0.1875rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.tree-line__arrow {
+  margin-inline: 0.5em;
+  color: var(--ink-muted);
+}
+
+.tree-more {
+  margin: var(--space-6) 0 0;
+  font-family: var(--font-display);
+}
+
+.tree-more a {
+  display: inline-block;
+  padding-block: 0.1875rem;
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+
 /* --- Who's here: the newest branches of the tree, on the front page ---------------------------
  * Beside the list from 64rem, after it (and the pager) below that. No frame: the heading and space
  * set it apart, and the branches use the tree's own guide lines. */
