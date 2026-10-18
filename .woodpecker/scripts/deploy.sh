@@ -3,7 +3,11 @@
 # after the image is in the registry, with the stack directory /home/eric/sites/heka-news mounted
 # at the same path and the host's Docker socket. Adapted from heka-site's deploy.sh.
 #
-#   1. Copy deploy/prod/compose.yaml into the stack, write TAG (this commit) into its .env, and
+#   1. Fetch Heka Vault heka-news/prod (SESSION_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) into
+#      vault.env, mode 600, which compose loads (ADR 0007). A vault that refuses or cannot be
+#      reached stops the deploy before the stack is touched; a missing GitHub key does not (the
+#      site then says sign-in opens soon). Values are never printed, only key names.
+#   1b. Copy deploy/prod/compose.yaml into the stack, write TAG (this commit) into its .env, and
 #      make sure data/ exists and belongs to uid 1000 (the image's `bun` user).
 #   2. Pull the image and recreate the container; compose waits for its healthcheck.
 #   3. Fail unless the container's /healthz reports this commit and / answers.
@@ -18,6 +22,10 @@
 # so the script can run against a scratch stack on a workstation.
 #
 #   CI_COMMIT_SHA        required; the image tag
+#   HEKA_VAULT_TOKEN     a read key for the Heka Vault project heka-news (Woodpecker secret
+#                        heka_vault_token). Unset: vault.env is written empty and sign-in stays closed
+#   HEKA_VAULT_URL       default http://192.168.4.67:8090
+#   HEKA_VAULT_ENV       default prod
 #   HEKA_NEWS_DIR        default /home/eric/sites/heka-news
 #   HEKA_NEWS_PUBLIC_URL default https://news.hekafactory.com
 set -eu
@@ -26,6 +34,9 @@ set -eu
 repo_dir="$(cd "$(dirname "$0")/../.." && pwd)"
 site_dir="${HEKA_NEWS_DIR:-/home/eric/sites/heka-news}"
 public_url="${HEKA_NEWS_PUBLIC_URL:-https://news.hekafactory.com}"
+vault_url="${HEKA_VAULT_URL:-http://192.168.4.67:8090}"
+vault_env="${HEKA_VAULT_ENV:-prod}"
+vault_project=heka-news
 
 fail() {
   echo "DEPLOY FAILED: $*" >&2
@@ -54,11 +65,50 @@ place() {
   mv "$1" "$2"
 }
 
-# --- 1. compose.yaml, .env and data/ -------------------------------------------------------------
+# --- 1. Heka Vault heka-news/prod into vault.env --------------------------------------------------
+
+vault_tmp="$(mktemp "${site_dir}/.vault.env.XXXXXX")"
+trap 'rm -f "$vault_tmp"' EXIT
+chmod 600 "$vault_tmp"
+chown "$owner" "$vault_tmp" 2>/dev/null || true
+
+# True when the fetched file sets KEY to something non-empty. Names only; values are never shown.
+vault_has() {
+  grep -Eq "^(export )?$1=[\"']?[^\"'[:space:]]" "$vault_tmp"
+}
+
+if [ -n "${HEKA_VAULT_TOKEN:-}" ]; then
+  echo "Fetching ${vault_project}/${vault_env} from Heka Vault at ${vault_url}"
+  code="$(curl -sS -o "$vault_tmp" -w '%{http_code}' --max-time 20 \
+    -H "Authorization: Bearer ${HEKA_VAULT_TOKEN}" \
+    "${vault_url}/api/v1/projects/${vault_project}/secrets?env=${vault_env}&path=%2F&format=dotenv")" ||
+    fail "cannot reach Heka Vault at ${vault_url} from the deploy step."
+  case "$code" in
+    2??) ;;
+    401 | 403)
+      fail "Heka Vault refused the key in heka_vault_token (HTTP ${code}). It must be a read key for the project ${vault_project}."
+      ;;
+    *) fail "Heka Vault answered HTTP ${code} for ${vault_project}/${vault_env}." ;;
+  esac
+  echo "Heka Vault ${vault_project}/${vault_env}: $(grep -Ec '^(export )?[A-Za-z_][A-Za-z0-9_]*=' "$vault_tmp" || true) keys"
+  for key in SESSION_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET; do
+    if vault_has "$key"; then echo "  ${key} is set"; else echo "  ${key} is missing"; fi
+  done
+  if vault_has GITHUB_CLIENT_ID && vault_has GITHUB_CLIENT_SECRET && vault_has SESSION_SECRET; then
+    echo "GitHub sign-in is open"
+  else
+    echo "WARNING: sign-in stays closed (the site says it opens soon) until all three keys are in the vault." >&2
+  fi
+else
+  : >"$vault_tmp"
+  echo "WARNING: no HEKA_VAULT_TOKEN; vault.env is empty and sign-in stays closed." >&2
+fi
+
+# --- 1b. compose.yaml, .env and data/ -------------------------------------------------------------
 
 compose_tmp="$(mktemp "${site_dir}/.compose.yaml.XXXXXX")"
 env_tmp="$(mktemp "${site_dir}/.env.XXXXXX")"
-trap 'rm -f "$compose_tmp" "$env_tmp"' EXIT
+trap 'rm -f "$compose_tmp" "$env_tmp" "$vault_tmp"' EXIT
 cp "${repo_dir}/deploy/prod/compose.yaml" "$compose_tmp"
 {
   echo "# Written by .woodpecker/scripts/deploy.sh on every deploy. Not secret."
@@ -66,6 +116,8 @@ cp "${repo_dir}/deploy/prod/compose.yaml" "$compose_tmp"
 } >"$env_tmp"
 place "$compose_tmp" "${site_dir}/compose.yaml"
 place "$env_tmp" "${site_dir}/.env"
+# The secrets stay mode 600, owned by the stack directory's owner.
+mv "$vault_tmp" "${site_dir}/vault.env"
 trap - EXIT
 
 # The database lives here. Create it on the first deploy; never touch what is inside.

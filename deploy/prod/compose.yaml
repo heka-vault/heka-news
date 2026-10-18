@@ -4,6 +4,8 @@
 #
 # Beside it on the host:
 #   .env    TAG, the commit whose image is running, written by the deploy. Nothing secret.
+#   vault.env  SESSION_SECRET, GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET from Heka Vault
+#           heka-news/prod, written by the deploy, mode 600 (ADR 0007). Never edit or copy it.
 #   data/   the database (heka-news.db and its -wal and -shm files). Owned by uid 1000, the image's
 #           `bun` user; the deploy creates it. Back it up; never delete it.
 #
@@ -19,12 +21,18 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    # The site's secrets. Values under `environment` win over this file, so none of its keys may
+    # appear there.
+    env_file:
+      - path: vault.env
+        required: false
     environment:
       GIT_SHA: ${TAG:?}
       PUBLIC_URL: https://news.hekafactory.com
       DATABASE_PATH: /data/heka-news.db
-      # GitHub logins of the moderators, comma-separated (ADR 0003; used from phase 3).
-      MODERATORS: ${MODERATORS:-}
+      # GitHub logins of the moderators, comma-separated (ADR 0003). They sign in without an
+      # invitation and start the invite tree.
+      MODERATORS: detroitpro
     volumes:
       - ./data:/data
     # The Cloudflare tunnel forwards news.hekafactory.com here.
