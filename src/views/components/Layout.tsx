@@ -38,6 +38,7 @@ const NAV: NavEntry[] = [
   { key: 'new', href: '/newest', label: 'New' },
   { key: 'posts', href: '/posts', label: 'Posts' },
   { key: 'status', href: '/status', label: 'Status' },
+  { key: 'tree', href: '/tree', label: 'Tree' },
 ]
 
 const MEMBER_NAV: NavEntry = { key: 'replies', href: '/replies', label: 'Replies' }
