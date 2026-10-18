@@ -1,7 +1,7 @@
 // Reading members: profiles and the invite tree. All user SQL for reads lives here.
 
 import type { Db } from './index.ts'
-import type { Member, TreeNode, UserProfile, UserRef } from './types.ts'
+import type { Member, TreeNode, TreeSummary, UserProfile, UserRef } from './types.ts'
 
 interface UserRow {
   id: number
@@ -93,6 +93,42 @@ export function inviteTree(db: Db): TreeNode[] {
     else roots.push(node)
   }
   return roots
+}
+
+/**
+ * The invite tree in brief, for the front page: how many members, how long the longest chain of
+ * invitations is, and the newest `limit` members (not banned) with who invited them.
+ */
+export function treeSummary(db: Db, limit: number): TreeSummary {
+  const size = db
+    .query<{ members: number; deepest: number | null }, []>(
+      `WITH RECURSIVE chain (id, depth) AS (
+         SELECT id, 0 FROM users WHERE invited_by IS NULL
+         UNION ALL
+         SELECT users.id, chain.depth + 1 FROM users JOIN chain ON users.invited_by = chain.id
+         WHERE chain.depth < 1000
+       )
+       SELECT (SELECT count(*) FROM users) AS members, (SELECT max(depth) FROM chain) AS deepest`,
+    )
+    .get()
+  const newest = db
+    .query<{ login: string; created_at: number; inviter: string | null }, [number]>(
+      `SELECT u.login, u.created_at, p.login AS inviter
+       FROM users u LEFT JOIN users p ON p.id = u.invited_by
+       WHERE u.banned = 0
+       ORDER BY u.created_at DESC, u.id DESC
+       LIMIT ?`,
+    )
+    .all(limit)
+  return {
+    members: size?.members ?? 0,
+    deepest: size?.deepest ?? 0,
+    newest: newest.map((row) => ({
+      login: row.login,
+      createdAt: row.created_at,
+      invitedBy: row.inviter,
+    })),
+  }
 }
 
 /** Every member's login and join time, for /sitemap.xml. Banned members are left out. */

@@ -286,3 +286,136 @@ counts and errors, `aria-invalid`, the first invalid field focused, placeholders
 16px inputs, `autocomplete` set, live regions for previews and send errors, confirmation pages
 before deleting, and a warning before leaving unsent writing (added after this review). Kept
 against the generic rules, as before: sentence case, and the GitHub mark as the only icon.
+
+
+## The invite tree, up front (2026-10-18)
+
+Written before the code, per `frontend-design`, then checked against its defaults. The invite tree
+is the thing this site has that other link sites do not: every member hangs under the person who
+vouched for them, in public. Until now it was a footer link and a short "Tree" in the bar. This
+section makes it a first-class part of the front page without taking the front page away from the
+ranked list.
+
+### The bar: "Invite tree", "Tree" only where it does not fit
+
+The bar says "Invite tree", the page's own name. On phones the lists take their own row (seven
+links for a moderator), so below a width that depends on how many links there are, the link shows
+"Tree" instead. The full name stays in the link as visually hidden text and the short word is
+`aria-hidden`, so a screen reader hears "Invite tree" once at every width. No JavaScript: the
+breakpoints are counted with `:has(> li:nth-child(n))`, as the gaps already are.
+
+Measured at 16px, weight 550 (Archivo; Liberation Sans standing in for Arial as the worst
+fallback, about 4% wider):
+
+| Bar | Links | Gap on phones | "Invite tree" from | Why there |
+|---|---|---|---|---|
+| Signed out | 5 | `--space-4` (was `--space-5`) | 21rem (336px) | 293px of links in the fallback face, 285px in Archivo; 360px leaves 320px |
+| Member | 6 | `--space-3` | 24.25rem (388px) | 346px fallback, 336px Archivo |
+| Moderator | 7 | `--space-2` | 25.5rem (408px) | 367px fallback, 356px Archivo |
+
+Above 40rem the lists share the first row with the wordmark and always say "Invite tree". The
+moderator bar at 360px keeps the 316px of links it has today (Archivo, "Tree"), one row.
+
+### "Who's here" on the front page
+
+**Job.** Show a reader, at a glance, that real people are here, who joined lately and who brought
+them in, and lead them to the full tree. Second to the list, always.
+
+**What it shows.**
+
+- A heading, "Who's here".
+- The five newest members (banned members are counted, never listed), grouped under the member
+  who invited them, newest group first; founding members group under "Founding member". Each new
+  member is their login, linked to their profile, then "joined 2 days ago" (the relative-time
+  element every list uses, kept current by `src/client/time.ts` on cached pages). Each inviter
+  is a muted link to their profile. Two levels at most, so a fourteen-deep chain never indents
+  the panel; the depth is told in words instead.
+- One sentence of size: "24 members so far." then, once anyone has been invited, "The longest
+  chain of invitations is 4 people long." The count is the number `/tree` shows, banned members
+  included, so the two never disagree. No count of founding members: they are the founding
+  moderators, and the site gives no count of moderators.
+- "See the whole invite tree", the one link out, at the foot.
+
+**Where it sits.**
+
+```
+1280px                                                    390px
++---------------------------------------------------+     +-----------------------+
+| bar                                               |     | bar                   |
++---------------------------------------------------+     +-----------------------+
+|  1 [|] Title of the top item       | Who's here   |     |  1 [|] Title          |
+|     128 quietfox 3 hours ago       |              |     |  ...                  |
+|  2 [|] Second item                 | tinplate     |     | 30 [|] Title          |
+|  ...                               | | jo  joined |     | Items 31 onward       |
+|                                    | quietfox     |     |                       |
+|                                    | | aleksandra |     | Who's here            |
+|                                    | 24 members...|     | tinplate              |
+|                                    | See the whole|     | | jo  joined 30 days  |
+| 30 ...                             |   invite tree|     | 24 members so far...  |
+| Items 31 onward                    |              |     | See the whole invite  |
++---------------------------------------------------+     +-----------------------+
+```
+
+- From 64rem, a 17rem column to the right of the list, top-aligned with the first item. At 1280px
+  the list keeps about 770px, a comfortable measure for 18px titles; at 1024px it keeps 600px.
+- Below 64rem, the same markup after the list and the pager, before the footer. It never sits
+  above or between stories on a phone. In source order it always comes after the list, so a
+  screen reader and the keyboard reach the stories first. It is an `<aside>` labelled by its
+  heading.
+- Page 1 of `/` only. Later pages and the other lists stay as they are.
+- On an empty site (production on day one) it sits beside, or under, the "Nothing has been posted
+  yet" state, and it is the proof that someone is already here.
+
+**How it relates to the floor.** It is the shift board's roster beside the tally sheet: the list
+counts marks, the panel names the people who make them. It is drawn with the tree's own idiom (the
+nested list with one guide line per level that `/tree` and the comments use), so a reader who
+opens `/tree` recognises it. No new color: inviters in muted ink, the new member in ink at 600, as
+on `/tree`. No frame: it sits on the floor like everything else, separated by space and its
+heading.
+
+**Empty and small.** No members: "No members yet." and one sentence on how membership works, with
+links to the about page and the tree. One member: their branch under "Founding member", "1 member
+so far. Everyone else joins by invitation." (no chain sentence until someone has been invited).
+
+**Cost.** Two small queries on page 1 of `/`: the five newest members joined to their inviters, and
+a recursive count of the chain depth over `users_invited_by`. No script, no images. The page stays
+public and cacheable for anonymous readers; nothing in the panel depends on who is looking.
+
+### Review against the defaults
+
+1. **The SaaS sidebar card** (default 4): a rounded box with a soft shadow and avatars. Not used:
+   no frame, no shadow, no avatars (the site has none; a login is the identity, as on `/tree`).
+2. **A big number with a small label** ("24 MEMBERS"). The generic answer leads with a stat. Not
+   used: the count is a sentence at the foot, in caption size, after the people.
+3. **A tally drawing of the member count.** Tempting, given the mark; rejected. It grows without
+   limit and turns into decoration past a dozen marks. Counts use tabular figures (principle 3).
+4. **An all-caps eyebrow** ("NEW MEMBERS") above the list (default 5). Not used: one sentence-case
+   heading.
+5. **"Members · 24 · 4 deep"** (middle-dot meta, default 5). Not used: the size reads as a phrase.
+6. **A strip of avatars ("and 20 others").** Not used: it shows faces, not the tree, and the tree
+   is the interesting part.
+7. **A fade-in on load.** Not used: no motion runs on load.
+
+### Reviews while building (the invite tree, up front)
+
+Screenshots against the seed and three extra databases (no members; one founding member and no
+items; the seed plus six members invited by one long login in one morning and an eight-member chain
+under `bollard`), at 320, 390 and 1280px, light and dark; the bar measured at 320 to 1280px for
+each role.
+
+**Worst cases** (break-ui)
+
+| # | Severity | Field | Worst case | What happened | Fix |
+|---|---|---|---|---|---|
+| 1 | Ugly | join time in the 17rem column | `aleksandra-wisniewska-kowalczyk-ops` among short logins | The long login pushed "joined…" to its own line while the others kept it inline: two row shapes in one list | From 64rem every join time takes its own line; on phones it stays inline |
+| 2 | Ugly | empty site, 1280px | "Nothing has been posted yet" beside the panel | The empty state's top padding put its heading 32px below "Who's here" | No top padding on the empty state inside the two-column layout |
+| 3 | Ugly | empty site, phones | the panel after the empty state | 80px of floor between them (the state's padding plus the panel's margin) | The panel drops its margin after an empty list |
+| 4 | Fragile | banned member | `growth-hacker-9000` joined 12 days ago | Would be listed on the front page | Banned members are counted, never listed (`treeSummary`) |
+| — | Holds | many in one morning | six from one inviter | They group under one inviter; five shown, the sixth is on `/tree` | — |
+| — | Holds | deep chain | twelve people | The panel stays two levels deep; the sentence says "12 people long" | — |
+| — | Holds | counts | 0, 1 and 32 members | "No members yet.", "1 member so far.", "32 members so far." | `plural()` |
+| — | Holds | bar at 320px | member and moderator | The lists wrap to a second row with "Tree", no horizontal overflow; as before this change | — |
+
+Just above 40rem (641px; two rows again by 700px) the bar still takes three rows for a moderator
+(wordmark, then the lists, then "Submit" and the login). It did with "Tree" too; it is left for a
+later pass on the bar.
