@@ -30,7 +30,7 @@ export interface PageContext {
   votes: { items: Set<number>; comments: Set<number> }
 }
 
-export type NavKey = 'top' | 'new' | 'posts' | 'status' | 'replies' | 'mod' | null
+export type NavKey = 'top' | 'new' | 'posts' | 'status' | 'tree' | 'replies' | 'mod' | null
 
 export function absoluteUrl(ctx: PageContext, path: string): string {
   return `${ctx.config.publicUrl}${path}`

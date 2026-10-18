@@ -46,6 +46,7 @@ export function TreePage({ ctx, roots }: { ctx: PageContext; roots: TreeNode[] }
     <Layout
       ctx={ctx}
       title="Invite tree"
+      nav="tree"
       description="Every member of heka news and who invited them. Membership is by invitation, and the tree is public."
       canonical="/tree"
     >
