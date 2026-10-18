@@ -20,7 +20,8 @@ Before any non-trivial task, read:
 
 Phases 1 to 5 are built: the read-only site, then GitHub sign-in and invitation links, posting,
 commenting, voting and flagging, the moderator queue and its public log, profiles, settings and
-`/replies` (ADR 0007). Sign-in opens when the GitHub app's credentials are in the environment;
+`/replies` (ADR 0007). Founding moderators come from `MODERATORS`; moderators make and remove
+other moderators from a member's profile (ADR 0003). Sign-in opens when the GitHub app's credentials are in the environment;
 until then `/signin` says it opens soon. Locally, with no GitHub app and outside production,
 `/signin` lists the seeded members and `/dev/sign-in-as/:login` signs you in as one.
 
@@ -36,7 +37,7 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 | `src/db/migrations/` | Plain SQL, `NNNN_name.sql`, applied in order at startup. Never edit one that has shipped |
 | `src/db/{items,comments,users,tags,modlog}.ts` | Read queries, one named function each |
 | `src/db/write.ts` | Writes: users, tags, items, comments, profiles; keeps counters and cached HTML in step |
-| `src/db/{accounts,sessions,invites,votes,flags,ratelimit,moderation}.ts` | Sign-in accounts, sessions, invitations, votes, flags, rate limits; every moderator action with its log row |
+| `src/db/{accounts,sessions,invites,votes,flags,ratelimit,moderation}.ts` | Sign-in accounts, sessions, invitations, votes, flags, rate limits; every moderator action (including making and removing moderators) with its log row |
 | `src/db/types.ts` | The shapes `src/db/` returns. Views depend on these, never on columns |
 | `src/lib/markdown.ts` | The one markdown pipeline (markdown-it, then sanitize-html). `MARKDOWN_VERSION` |
 | `src/lib/rank.ts` | The front page formula (ADR 0004) |
@@ -124,7 +125,8 @@ dashes. Buttons and links say what happens. Empty states say what will appear an
 part; errors say what happened. Never: AI-powered, AI-native, 10x, unlock, leverage (as a verb),
 revolutionize, seamless, cutting-edge, supercharge, empower, "the future of". Run the
 `humanizer` skill on new copy, against the voice rules in this section. Name no members of the
-group on the site; moderators are "three of us".
+group on the site, and give no count of moderators: moderators add and remove moderators from
+the site, so any number goes stale.
 
 ## Which skill applies
 

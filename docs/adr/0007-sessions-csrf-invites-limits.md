@@ -27,11 +27,13 @@ keys off one cookie.
 - **The access token is never kept**: the code is exchanged server-side, the profile is read, and
   the token is revoked at GitHub (best effort) and dropped.
 - **Who gets an account**: an existing member (matched by GitHub id; login renames follow); a login
-  in `MODERATORS`, created as a root of the invite tree; or someone with an open invitation, created
+  in `MODERATORS` (a founding moderator), created as a root of the invite tree; or someone with an open invitation, created
   with `invited_by` set and the invitation marked used in the same transaction. Anyone else sees a
   page saying membership is by invitation, and nothing is created. Banned members are refused.
-- **`users.is_moderator` mirrors `MODERATORS` at every GitHub sign-in**, so removing a login
-  from the list demotes it at its next sign-in.
+- **Sign-in sets `users.is_moderator` for logins in `MODERATORS` and leaves everyone else's
+  alone.** (It used to mirror the list both ways, so removing a login demoted it at its next
+  sign-in. Since migration 0003 moderators make and remove moderators on the site, and sign-in
+  must not undo that; see ADR 0003.)
 - **Without `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`** (and, in production, `SESSION_SECRET`)
   sign-in is closed: `/signin` says it opens soon, and nothing crashes.
 - **Development sign-in**: `/dev/sign-in-as/:login` exists only when `NODE_ENV` is not
@@ -46,6 +48,8 @@ keys off one cookie.
   another 30 days and re-sends the cookie. An expired or unknown cookie is cleared.
 - **Rotated on sign-in**: any session the browser already had is deleted before the new one is made.
 - **Signing out deletes the row.** Banning a member deletes all of their rows.
+- **The member is read fresh on every request**: the session lookup joins `users`, so a ban or a
+  change of moderator status applies at the next request without touching the session.
 - The cache switch (ADR 0003) is unchanged: a request carrying `heka_session` is `private,
   no-store`, valid session or not, and every page that reads the session is personal.
 
@@ -89,7 +93,8 @@ Sign-out passes the same checks. SameSite=Lax on the session cookie is a third, 
   acts. An item with three open flags leaves the front page (it stays on `/newest` and its own
   page) until a moderator removes it or keeps it; either resolves its flags.
 - **The moderation log gains two actions** (`create_tag`, `dismiss_flags`); the table was rebuilt
-  in migration 0002 to widen its CHECK. Every moderator action requires a reason and writes the log
+  in migration 0002 to widen its CHECK. Migration 0003 rebuilt it the same way for
+  `promote_moderator` and `remove_moderator`. Every moderator action requires a reason and writes the log
   in the same transaction.
 - **Migration 0002 uses `ALTER TABLE ... ADD COLUMN`**, which has no `IF NOT EXISTS`. That is safe
   because `migrate()` applies a file and records it in one transaction.

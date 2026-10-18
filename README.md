@@ -37,7 +37,8 @@ bun run dev           # http://localhost:8080
 GitHub OAuth app configured, `/signin` lists the seeded members and lets you sign in as any of
 them; that shortcut does not exist when `NODE_ENV=production`. To use GitHub, set
 `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and `SESSION_SECRET`, with the app's callback at
-`<PUBLIC_URL>/auth/github/callback`; logins in `MODERATORS` can sign in without an invitation.
+`<PUBLIC_URL>/auth/github/callback`; logins in `MODERATORS` are founding moderators and can sign
+in without an invitation. Moderators make and remove other moderators from member profiles.
 
 ## Contributing
 
