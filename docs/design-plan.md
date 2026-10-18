@@ -44,7 +44,7 @@ The sibling's palette, with each color keeping its one job.
   text, post bodies, comments, bios. Post bodies at 18px on phones and 21px from 60rem, line
   height 1.6, measure capped near 66 characters.
 - No monospace face is loaded; code uses the platform's. Counts use tabular figures.
-- **Differences from the sibling, for speed** (found while making Lighthouse 100 a gate on a
+- **Differences from the sibling, for speed** (found while getting Lighthouse to 100 on a
   throttled phone): Source Serif 4 is loaded from its weight-only files (50 KB for Latin) instead
   of the optical-size ones (120 KB); every serif here is reading text at 16–21px, where the optical
   axis barely moves. Faces use `font-display: optional` with the regular faces preloaded, so text
@@ -89,7 +89,7 @@ The sibling's palette, with each color keeping its one job.
 2. Density comes from type and rhythm, not from rules: no hairline between rows.
 3. Numbers only where there is a real sequence (front page ranks). Counts are tabular.
 4. Meta reads as a phrase ("quietfox 3 hours ago", "42 comments"), never a string of separators.
-5. Every page works without JavaScript; the site ships none. Motion only answers a person's
+5. Pages are complete server-rendered HTML; JavaScript improves interactions but never owns rendering. Motion only answers a person's
    action (press, fold) or bridges a navigation, and stops under reduced motion.
 6. Worst-case data is the design input, not an afterthought: long titles, unbreakable URLs,
    right-to-left text, 0 and 10,000 points, fourteen levels of replies, empty lists.

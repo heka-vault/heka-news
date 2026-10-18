@@ -40,7 +40,7 @@ the pin here. None of these skills contains a script or makes a network call; th
 - **break-ui**: any change to how an item, a comment or a member renders. The worst-case data it asks for lives permanently in the seed (`scripts/seed-data.ts`), so instead of its "Demo data / Worst case" toggle, run `bun run seed -- --reset` and look.
 - **mobile-native**: anything that will be tapped: tap targets, hover gating, press feedback, `theme-color`.
 - **web-design-guidelines**: review a UI change before opening the PR (accessibility, focus, forms, motion).
-- **humanizer**: every piece of copy a visitor reads (page text, empty states, labels, the about page). Use `docs/voice-sample.md` as the writing sample.
+- **humanizer**: every piece of copy a visitor reads (page text, empty states, labels, the about page). With no writing sample in this public repo, use the voice rules under "Words" in `CLAUDE.md`.
 
 ## Not vendored
 

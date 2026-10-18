@@ -84,12 +84,16 @@ describe('status codes', () => {
   })
 })
 
-describe('works without JavaScript', () => {
+describe('scripts stay same-origin and out of the markup', () => {
   for (const path of PAGES) {
-    test(`${path} ships no script but structured data`, async () => {
+    test(`${path} has no inline script or handlers`, async () => {
       const html = await (await get(path)).text()
       const scripts = html.match(/<script\b[^>]*>/g) ?? []
-      for (const tag of scripts) expect(tag).toBe('<script type="application/ld+json">')
+      for (const tag of scripts) {
+        expect(
+          tag === '<script type="application/ld+json">' || /\ssrc="\/[^"/][^"]*"/.test(tag),
+        ).toBe(true)
+      }
       expect(html).not.toMatch(/\son[a-z]+=/i)
     })
   }

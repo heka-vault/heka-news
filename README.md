@@ -39,7 +39,7 @@ Pull requests are welcome. Before you open one:
 
 ```bash
 bun run check         # types, lint, tests, and a smoke test against the real server
-bun run lighthouse    # 100 in all four Lighthouse categories, mobile and desktop (needs Chrome)
+bun run lighthouse    # speed check: Lighthouse on key pages, mobile and desktop (needs Chrome)
 ```
 
 Both must pass. [`CLAUDE.md`](CLAUDE.md) has the layout and the rules the code follows; it is

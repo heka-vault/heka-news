@@ -2,10 +2,8 @@
 # locally: tsc, biome, `bun test`, and the smoke test that boots the real server on a seeded
 # temporary database and requests every route.
 #
-# Not here yet: `bun run lighthouse` (the other gate in CLAUDE.md). It needs Chrome in the step
-# image, and Lighthouse's performance score depends on the CPU it runs on; on a shared CI host it
-# would fail for reasons that are not the change. Until there is a pinned image with Chrome and a
-# quiet runner, run it locally before every UI pull request and paste the scores into the PR.
+# Not here: `bun run lighthouse`. It is a speed check, not a gate (CLAUDE.md), and its performance
+# score depends on the CPU it runs on. Run it locally before UI pull requests and note the scores.
 #
 # No Docker here: the image is built on merge (deploy.yaml). No secrets.
 

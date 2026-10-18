@@ -26,5 +26,4 @@ readable, forkable and open to pull requests.
 ## Consequences
 
 - Anyone can run the site locally with seed data (`bun run seed`).
-- A contributor's change passes the same gate a maintainer's does: `bun run check` and
-  `bun run lighthouse`.
+- A contributor's change passes the same gate a maintainer's does: `bun run check`.

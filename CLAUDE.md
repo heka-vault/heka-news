@@ -55,7 +55,7 @@ bun install                  # commit bun.lock; never bun.lockb
 bun run seed                 # seed ./data/heka-news.db (add -- --reset to start over)
 bun run dev                  # http://localhost:8080, restarts on change
 bun run check                # the PR gate: tsc, biome ci, bun test, smoke. Green before every push
-bun run lighthouse           # the other gate: 100/100/100/100 on /, a post and a profile, mobile
+bun run lighthouse           # speed check (not a gate): /, a post and a profile, mobile
                              # and desktop. Needs Chrome (CHROME_PATH). LIGHTHOUSE_PRESETS=mobile
                              # runs one form factor while you iterate
 bun run shots                # screenshots of key pages, light, dark and 390px, into ./shots/
@@ -70,13 +70,17 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   custom functions, so the engine can become Turso without touching anything outside `src/db/`.
 - **Schema changes are new migration files.** Never edit a migration that has run anywhere. Make
   statements re-runnable (`IF NOT EXISTS`).
-- **No client framework, and every page works without JavaScript.** The site ships none today. If
-  JavaScript is ever added it improves something that already works without it (progressive
-  enhancement), and it stays small and inline. A test asserts there is no `<script>` but JSON-LD.
-- **Lighthouse 100 is a gate**, in all four categories, on mobile and desktop. A change that
-  drops a point is not done. Things that cost points before: a linked stylesheet (now inline), a
-  130 KB italic face for one blockquote, 18px-tall links in a row (axe target-size), a CSP without
-  `connect-src` (Lighthouse could not read robots.txt).
+- **Server-rendered pages, not a single-page app.** Every URL returns complete HTML from the
+  server, and there is no client framework or client-side router. JavaScript is welcome where it
+  makes the site better (voting without a reload, replying in place, a markdown preview, live
+  relative times): plain modules served from this origin as files, loaded per feature, with no
+  inline script and no inline handlers (the CSP allows `script-src 'self'` only, and a test checks
+  the markup). Reading must still work if a script fails to load.
+- **Pages load fast.** That is the goal; Lighthouse is how we check it, not a gate. Run
+  `bun run lighthouse` before UI pull requests and note the scores; a big drop needs a reason.
+  Things that cost speed before: a linked stylesheet (now inline), a 130 KB italic face for one
+  blockquote, 18px-tall links in a row (axe target-size), a CSP without `connect-src`
+  (Lighthouse could not read robots.txt).
 - **Everything a member writes goes through `renderMarkdown()`** and is cached in `body_html`. Do
   not render user text any other way. Changing the pipeline's output means bumping
   `MARKDOWN_VERSION`; every row is re-rendered at the next start. Outbound user links carry
@@ -107,7 +111,7 @@ direct, slightly dry. "We" is heka. Sentence case. Short sentences, concrete nou
 dashes. Buttons and links say what happens. Empty states say what will appear and how to take
 part; errors say what happened. Never: AI-powered, AI-native, 10x, unlock, leverage (as a verb),
 revolutionize, seamless, cutting-edge, supercharge, empower, "the future of". Run the
-`humanizer` skill on new copy with `docs/voice-sample.md` as the sample. Name no members of the
+`humanizer` skill on new copy, against the voice rules in this section. Name no members of the
 group on the site; moderators are "three of us".
 
 ## Which skill applies
@@ -119,7 +123,7 @@ group on the site; moderators are "three of us".
 | Anything a person presses or folds | `emil-design-eng` (review), `mobile-native` (tap, hover, targets) |
 | Adding or changing motion | `animate` first (its gate usually says no), then `review-animations`; `animation-performance` if it drops frames |
 | How an item, comment or member renders | `break-ui`, against the worst cases already in the seed |
-| Any copy | `humanizer` with `docs/voice-sample.md` |
+| Any copy | `humanizer`, against the voice rules under Words |
 | Before the PR for any UI change | `web-design-guidelines` |
 
 ## Deploy

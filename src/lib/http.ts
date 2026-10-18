@@ -73,10 +73,13 @@ export function isCompressible(contentType: string | null): boolean {
   return contentType !== null && COMPRESSIBLE.test(contentType)
 }
 
-/** Headers on every response. The site loads nothing from elsewhere and runs no script. */
+/**
+ * Headers on every response. The site loads nothing from elsewhere. Scripts may run, but only files
+ * served from this origin: no inline script, no inline event handlers, nothing from a CDN.
+ */
 export const SECURITY_HEADERS: Record<string, string> = {
   'Content-Security-Policy':
-    "default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'interest-cohort=(), browsing-topics=()',
