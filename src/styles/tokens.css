@@ -1,0 +1,173 @@
+/*
+ * Design tokens: every color, font, size and spacing value the site uses. Copied from
+ * hekafactory.com (heka-site, src/styles/tokens.css) so the two sites stay one family; the values
+ * above "heka news additions" match it exactly. Keep them in step: change a shared value there
+ * first, then here. Components reference only these custom properties (docs/design-plan.md).
+ *
+ * The palette is a factory floor: pale floor paint, machine green (the paint on old machine tools),
+ * floor-marking yellow for the route a change travels (the line on the home page, real sequences),
+ * and inspection-stamp violet for the one mark a person makes (links, focus, the gate).
+ *
+ * Contrast (WCAG 2.x, measured when the palette was set; text needs 4.5:1, marks 3:1):
+ *   light  --ink on --bg 13.4:1, --ink-muted 6.3:1, --stamp 6.9:1 (7.4:1 on --bg-raised)
+ *          --panel-ink on --panel 9.7:1, --panel-muted 6.6:1, --tick 4.2:1, --tick-read 6.1:1
+ *          --lane on --panel 6.9:1, --lane-ink on --bg 5.7:1 (6.1:1 on --bg-raised)
+ *   dark   --ink on --bg 14.7:1, --ink-muted 8.2:1, --stamp 8.4:1
+ *          --panel-ink on --panel 10.1:1, --panel-muted 6.9:1, --tick 3.9:1, --tick-read 6.9:1
+ *          --lane on --panel 7.7:1, --lane-ink on --bg 10.5:1 (9.6:1 on --bg-raised)
+ *          --bg on --button (dark) 11.5:1
+ *
+ * Pairs heka news adds (measured 2026-10-18, light / dark):
+ *   --ink-muted on --bg-raised (comment meta) 6.8 / 7.5, --ink on --bg-raised 14.4 / 13.4
+ *   --lane-ink on --bg (rank numerals) 5.7 / 10.5, --bar-muted on --bar-bg (nav) 6.6 / 6.9
+ *   --tick-read on --bar-bg (focus in the bar) 6.1 / 6.8, --stamp on --bg (vote mark) 6.9 / 8.4
+ *   --ink-muted on the :target tint (12% --stamp over --bg-raised) 5.6 / 5.9
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Floor and ink (light) */
+  --bg: #eef0eb;
+  --bg-raised: #f7f8f4;
+  --ink: #16291f;
+  --ink-muted: #4a5b53;
+  --line: rgb(22 41 31 / 0.18);
+
+  /* Machine green: the hero panel and the solid button */
+  --panel: #1f4235;
+  --panel-ink: #eef0eb;
+  --panel-muted: #b9cbc1;
+  --tick: #7fa894;
+  --tick-read: #c8b6ff;
+
+  /* Floor-marking yellow: the route a change travels. Only on the panel (--lane) and for sequence
+   * numerals on the floor (--lane-ink). Never a background, never body text. */
+  --lane: #f2c744;
+  --lane-ink: #7a5800;
+
+  --button: #1f4235;
+  --button-ink: #eef0eb;
+  --button-hover: #16291f;
+
+  /* Inspection-stamp violet: links, the current page, focus, the reviewed-by-a-person mark */
+  --stamp: #5638b8;
+  --focus: #5638b8;
+
+  /* Type: Archivo (a grotesque with a width axis) for display and interface, Source Serif 4 for
+   * reading. Code falls back to the platform's monospace; no third face is loaded. */
+  --font-display: "Archivo Variable", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Source Serif 4 Variable", "Iowan Old Style", Georgia, serif;
+  --font-code: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Widths for Archivo (font-stretch). Wide for display, normal for interface text. */
+  --stretch-display: 118%;
+  --stretch-ui: 100%;
+
+  /* Scale: the classic 14, 16, 18, 21, 24, 36, 48, 72 ladder (Bringhurst), in rem. */
+  --text-caption: 0.875rem;
+  --text-ui: 1rem;
+  --text-body: 1.125rem;
+  --text-lead: 1.3125rem;
+  --text-h3: 1.5rem;
+  --text-h2: clamp(1.75rem, 1.3rem + 1.6vw, 2.25rem);
+  --text-h1: clamp(2.25rem, 1.5rem + 2.8vw, 3rem);
+  --text-hero: clamp(2.75rem, 1rem + 6.4vw, 6rem);
+  /* Big numerals and the station names on the line */
+  --text-station: 1.3125rem;
+
+  --leading-display: 1.05;
+  --leading-heading: 1.2;
+  --leading-body: 1.6;
+
+  /* Space and layout */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 5rem;
+  --space-9: 8rem;
+
+  --page-max: 74rem;
+  --prose-max: 38rem;
+  --gutter: clamp(1.25rem, 5vw, 3rem);
+
+  --radius-control: 6px;
+  --radius-frame: 4px;
+  --line-weight: 4px;
+  --radius-tick: 1px;
+  --duration: 180ms;
+
+  /* heka news additions ------------------------------------------------------------------------ */
+
+  /* Titles in a list: Archivo at normal width, between --text-ui and --text-body. */
+  --text-title: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  /* A post's body: 18px on phones, 21px (--text-lead) on wide screens. */
+  --text-reading: clamp(1.125rem, 0.95rem + 0.6vw, 1.3125rem);
+  /* About 66 characters of Source Serif 4 at any size. */
+  --measure: 34em;
+  /* Headings inside a post: always above --text-reading, so a subheading never reads smaller
+   * than the paragraph under it (better-typography). */
+  --text-reading-h2: clamp(1.375rem, 1.05rem + 1.2vw, 1.875rem);
+  --text-reading-h3: clamp(1.1875rem, 1rem + 0.7vw, 1.5rem);
+  /* Comment text: a step under a post's body, so a thread stays dense. */
+  --text-comment: clamp(1rem, 0.94rem + 0.25vw, 1.125rem);
+  --leading-tight: 1.3;
+
+  /* The site bar: the sibling's machine-green panel, as a strip. */
+  --bar-bg: var(--panel);
+  --bar-ink: var(--panel-ink);
+  --bar-muted: var(--panel-muted);
+
+  /* Comment and invite-tree nesting. */
+  --indent: 1.25rem;
+  --indent-deep: 0.5rem;
+
+  /* Motion (emil-design-eng): strong curves; durations by role. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --duration-press: 120ms;
+  --duration-fold: 200ms;
+  --duration-fold-close: 140ms;
+  --duration-page: 140ms;
+  --duration-morph: 220ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Night shift: the floor goes dark green, the panel stays a lighter machine green */
+    --bg: #0f1916;
+    --bg-raised: #15221d;
+    --ink: #e3eae5;
+    --ink-muted: #a2b3aa;
+    --line: rgb(227 234 229 / 0.16);
+
+    --panel: #1b3a2f;
+    --panel-ink: #e3eae5;
+    --panel-muted: #b2c6bb;
+    --tick: #6f9a85;
+    --tick-read: #c8b6ff;
+
+    --lane: #f2c744;
+    --lane-ink: #e9c24a;
+
+    --button: #b8d6c4;
+    --button-ink: #0f1916;
+    --button-hover: #e3eae5;
+
+    --stamp: #b8a4ff;
+    --focus: #b8a4ff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+    --duration-press: 0ms;
+    --duration-fold: 0ms;
+    --duration-fold-close: 0ms;
+  }
+}

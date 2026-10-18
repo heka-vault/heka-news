@@ -1,0 +1,34 @@
+{
+  "name": "heka-news",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "seed": "bun scripts/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "format": "biome format --write .",
+    "smoke": "bun scripts/smoke.ts",
+    "check": "bun run typecheck && bun run lint && bun test && bun run smoke",
+    "lighthouse": "bun scripts/lighthouse.ts",
+    "shots": "sh scripts/screenshots.sh"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "5.3.0",
+    "@fontsource-variable/source-serif-4": "5.3.1",
+    "hono": "^4.13.13",
+    "markdown-it": "^15.0.3",
+    "sanitize-html": "^2.18.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@lhci/cli": "^0.15.1",
+    "@types/bun": "^1.4.3",
+    "@types/markdown-it": "^14.2.0",
+    "@types/sanitize-html": "^2.16.2",
+    "typescript": "~6.0.3"
+  }
+}

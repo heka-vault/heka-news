@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# the database: never committed, in any form
+data/
+*.db
+*.db-*
+*.db.*
+*.sqlite
+*.sqlite-*
+
+# Lighthouse CI reports
+.lighthouseci/
+
+# logs
+*.log
+
+# environment variables: none are committed
+.env
+.env.*
+
+# OS and editor files
+.DS_Store
+.idea/
+shots/

@@ -1,0 +1,71 @@
+# Woodpecker CD: every push to `main` deploys news.hekafactory.com.
+#
+#   build-image   build this commit's image and push it to 192.168.5.251:5000, skipping the build
+#                 when the tag is already there
+#   deploy        .woodpecker/scripts/deploy.sh: copy deploy/prod/compose.yaml into the stack,
+#                 write TAG, create data/, compose pull and up, then wait until the container's
+#                 /healthz reports this commit (checked with `compose exec ... bun -e`)
+#   cleanup       prune old build cache and images on the host
+#   notify        .woodpecker/scripts/notify.sh: one line in the project's Discord channel, pass
+#                 or fail
+#
+# Every step mounts the host's Docker socket, and deploy also mounts /home/eric/sites/heka-news at
+# the same path (so compose paths mean the same thing inside the step). Mounting volumes needs the
+# repo marked Trusted (volumes) in Woodpecker; every step here needs it.
+#
+# Secrets: only discord_webhook, for notify. The deploy needs no credentials.
+#
+# Logic lives in .woodpecker/scripts/: Woodpecker substitutes $VARS in inline commands and traces
+# each one, and long inline blocks have been truncated.
+
+when:
+  - event: push
+    branch: main
+  - event: manual
+    branch: main
+
+steps:
+  - name: build-image
+    image: docker:27-cli
+    environment:
+      DOCKER_BUILDKIT: '1'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - apk add --no-cache curl >/dev/null
+      - sh .woodpecker/scripts/build-image.sh heka-news Dockerfile
+
+  - name: deploy
+    image: docker:27-cli
+    depends_on: [build-image]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/eric/sites/heka-news:/home/eric/sites/heka-news
+    commands:
+      - apk add --no-cache curl >/dev/null
+      - sh .woodpecker/scripts/deploy.sh
+
+  - name: cleanup
+    image: docker:27-cli
+    depends_on: [deploy]
+    when:
+      - status: [success, failure]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - docker builder prune -af --filter "until=24h"
+      - docker image prune -af --filter "until=72h"
+
+  # A message in the project's Discord channel when a deploy finishes, pass or fail. The
+  # Woodpecker repo secret discord_webhook holds the channel's webhook URL.
+  - name: notify
+    image: docker:27-cli
+    depends_on: [deploy]
+    when:
+      - status: [success, failure]
+    environment:
+      DISCORD_WEBHOOK:
+        from_secret: discord_webhook
+    commands:
+      - apk add --no-cache curl >/dev/null
+      - sh .woodpecker/scripts/notify.sh

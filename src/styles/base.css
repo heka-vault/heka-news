@@ -1,0 +1,275 @@
+/* Base styles: element defaults, layout helpers and the shared patterns, copied from
+ * hekafactory.com (heka-site, src/styles/global.css) and trimmed to what this site uses. The font
+ * @font-face rules are added ahead of this file by src/lib/assets.ts. Values come from tokens.css;
+ * nothing here hard-codes a color, a font name or a size. heka news patterns are in app.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  overflow-wrap: break-word;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
+  font-weight: 750;
+  line-height: var(--leading-heading);
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h3,
+h4 {
+  font-stretch: var(--stretch-ui);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-color: var(--stamp);
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.18em;
+  transition: color var(--duration) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    color: var(--stamp);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--stamp);
+  color: var(--bg);
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--font-code);
+  font-size: 0.875em;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: var(--space-7) 0;
+}
+
+/* Hidden but read by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -3rem;
+  z-index: 10;
+  background: var(--button);
+  color: var(--button-ink);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+/* Layout */
+.wrap {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.lede {
+  font-size: var(--text-lead);
+  line-height: 1.5;
+  max-width: 36rem;
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+/* Interface text: nav, buttons, small facts. Archivo at normal width, sentence case. */
+.ui {
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-ui);
+  font-size: var(--text-ui);
+  font-weight: 500;
+}
+
+/* Buttons: one solid, one quiet. The label says what happens. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 1.15rem;
+  border: 2px solid var(--button);
+  border-radius: var(--radius-control);
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-ui);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  color: var(--button-ink);
+  background: var(--button);
+  touch-action: manipulation;
+  transition:
+    background-color var(--duration) ease,
+    border-color var(--duration) ease,
+    color var(--duration) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    color: var(--button-ink);
+    background: var(--button-hover);
+    border-color: var(--button-hover);
+  }
+}
+
+.button--quiet {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button--quiet:hover {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+}
+
+/* Long-form text: blog posts and the about page. */
+.prose {
+  max-width: var(--prose-max);
+  font-size: var(--text-body);
+}
+
+.prose > * {
+  margin-block: 0;
+}
+
+.prose > * + * {
+  margin-top: var(--space-5);
+}
+
+.prose > h2 + *,
+.prose > h3 + * {
+  margin-top: var(--space-4);
+}
+
+.prose > h2 {
+  font-size: var(--text-h3);
+  font-stretch: var(--stretch-display);
+  margin-top: var(--space-7);
+}
+
+.prose > h3 {
+  font-size: var(--text-body);
+  margin-top: var(--space-6);
+}
+
+.prose strong {
+  font-weight: 650;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.25rem;
+}
+
+.prose li + li {
+  margin-top: var(--space-2);
+}
+
+.prose li::marker {
+  color: var(--ink-muted);
+}
+
+.prose blockquote {
+  margin-inline: 0;
+  padding-left: var(--space-5);
+  border-left: 3px solid var(--stamp);
+  color: var(--ink-muted);
+}
+
+.prose :not(pre) > code {
+  background: var(--bg-raised);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  overflow-wrap: break-word;
+}
+
+.prose pre {
+  padding: var(--space-4);
+  overflow-x: auto;
+  border-radius: var(--radius-control);
+  font-size: var(--text-caption);
+  line-height: 1.55;
+}

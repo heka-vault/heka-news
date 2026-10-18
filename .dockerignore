@@ -1,0 +1,16 @@
+# Only what the image build reads. node_modules is installed inside the build stage.
+node_modules
+data
+*.db
+*.db-*
+.git
+.lighthouseci
+.env
+.env.*
+*.log
+docs
+test
+.agents
+.claude
+.woodpecker
+scripts

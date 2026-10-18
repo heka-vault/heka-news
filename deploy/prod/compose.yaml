@@ -1,0 +1,43 @@
+# The production stack: /home/eric/sites/heka-news/compose.yaml on the host.
+# Never edit the copy on the server. Every push to `main` copies this file there and deploys it
+# (.woodpecker/deploy.yaml, .woodpecker/scripts/deploy.sh).
+#
+# Beside it on the host:
+#   .env    TAG, the commit whose image is running, written by the deploy. Nothing secret.
+#   data/   the database (heka-news.db and its -wal and -shm files). Owned by uid 1000, the image's
+#           `bun` user; the deploy creates it. Back it up; never delete it.
+#
+# By hand, on the server (the deploy does all of this):
+#   docker compose pull && docker compose up -d --wait
+name: heka-news
+
+services:
+  heka-news:
+    image: ${HEKA_NEWS_REGISTRY:-192.168.5.251:5000}/heka-news:${TAG:?}
+    restart: unless-stopped
+    # Nothing in the container writes outside /data (the volume) and /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      GIT_SHA: ${TAG:?}
+      PUBLIC_URL: https://news.hekafactory.com
+      DATABASE_PATH: /data/heka-news.db
+      # GitHub logins of the moderators, comma-separated (ADR 0003; used from phase 3).
+      MODERATORS: ${MODERATORS:-}
+    volumes:
+      - ./data:/data
+    # The Cloudflare tunnel forwards news.hekafactory.com here.
+    ports:
+      - '127.0.0.1:${HEKA_NEWS_PORT:-3311}:8080'
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      start_interval: 1s

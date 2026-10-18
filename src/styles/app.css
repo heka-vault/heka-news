@@ -1,0 +1,1119 @@
+/* heka news: the site bar, item lists, the item page and reading view, comments, the invite tree,
+ * the moderation log and the footer. docs/design-plan.md is the plan this implements. Values come
+ * from tokens.css; hover styles are gated to fine pointers (mobile-native); every motion stops
+ * under prefers-reduced-motion. */
+
+:root {
+  --mark-read: var(--stamp);
+}
+
+body {
+  min-height: 100dvh;
+}
+
+main {
+  padding-bottom: var(--space-7);
+}
+
+main:focus {
+  outline: none;
+}
+
+/* The comment band runs into the footer, with no strip of floor between them. */
+main:has(> .discussion:last-child) {
+  padding-bottom: 0;
+}
+
+/* Controls with their own press feedback: no grey tap flash, no double-tap zoom delay, no text
+ * selection on a long press. */
+.vote__mark,
+.c-toggle,
+.pager a,
+.bar a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.vote__mark,
+.c-toggle {
+  user-select: none;
+}
+
+/* --- The site bar: the sibling's machine-green panel, as a strip -------------------------------- */
+
+.bar {
+  background: var(--bar-bg);
+  color: var(--bar-ink);
+  --mark-read: var(--tick-read);
+  --focus: var(--tick-read);
+}
+
+.bar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-5);
+  min-height: 3.5rem;
+  padding-block: var(--space-1);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-stretch: var(--stretch-display);
+  font-size: var(--text-lead);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  padding-block: var(--space-2);
+}
+
+.bar__nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bar__nav a {
+  display: inline-block;
+  padding-block: var(--space-3);
+  color: var(--bar-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.bar__nav a[aria-current="page"] {
+  color: var(--bar-ink);
+  text-decoration-line: underline;
+  text-decoration-color: var(--lane);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 0.4em;
+}
+
+.bar__signin {
+  margin-left: auto;
+  padding: 0.35rem 0.8rem;
+  border: 1.5px solid var(--bar-muted);
+  border-radius: var(--radius-control);
+  color: var(--bar-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bar__nav a:hover,
+  .bar__signin:hover {
+    color: var(--bar-ink);
+  }
+
+  .bar__signin:hover {
+    border-color: var(--bar-ink);
+  }
+}
+
+/* Phones: the wordmark and sign-in on the first row, the lists on the second. */
+@media (max-width: 40rem) {
+  .bar__inner {
+    padding-top: var(--space-2);
+  }
+
+  .bar__signin {
+    order: 2;
+  }
+
+  .bar__nav {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .bar__nav ul {
+    gap: 0 var(--space-5);
+  }
+
+  .bar__nav a {
+    padding-block: var(--space-2) var(--space-3);
+  }
+}
+
+/* --- Page headings ---------------------------------------------------------------------------- */
+
+.page-head {
+  margin-block: var(--space-6) var(--space-5);
+}
+
+[id] {
+  scroll-margin-top: var(--space-4);
+}
+
+.page-head h1 {
+  font-size: var(--text-h2);
+  overflow-wrap: anywhere;
+}
+
+.page-head p {
+  margin: var(--space-2) 0 0;
+  max-width: 40rem;
+  color: var(--ink-muted);
+  font-size: var(--text-ui);
+}
+
+.list-page {
+  padding-top: var(--space-5);
+}
+
+.list-page > .page-head {
+  margin-top: var(--space-2);
+}
+
+.section-title {
+  font-size: var(--text-h3);
+  margin: var(--space-7) 0 var(--space-4);
+}
+
+/* --- Item lists --------------------------------------------------------------------------------
+ * One grid for the whole list, with each row on a subgrid, so the rank and vote columns line up
+ * down the page whatever the widest count is. No rules between rows: space separates them. */
+
+.items {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: var(--space-4);
+  column-gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.items--ranked {
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.item {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: start;
+}
+
+.item__rank {
+  padding-top: 0.2rem;
+  color: var(--lane-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+  text-align: end;
+}
+
+.item__main {
+  min-width: 0;
+}
+
+.item__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.item__title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.item__title a:visited {
+  color: var(--ink-muted);
+}
+
+.item__domain,
+.item__kind {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.item__kind {
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .item__title a:hover {
+    text-decoration-line: underline;
+  }
+}
+
+/* The meta line reads as a phrase: no separators, just space. */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+}
+
+.meta a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Links in a row of interface text get a 24px-tall target (WCAG 2.2 target size): inline-block
+ * with a little padding, so the hit area grows and the text does not move. */
+.meta a,
+.c-head a,
+.facts a,
+.tree__member a,
+.site-footer nav a {
+  display: inline-block;
+  padding-block: 0.1875rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+}
+
+.meta .meta__author {
+  color: var(--ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .meta a:hover {
+    color: var(--ink);
+    text-decoration-line: underline;
+  }
+}
+
+.tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* A tag: a paper label wired to a part, not a pill. */
+.tag {
+  padding: 0 0.4em;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tick);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tag:hover {
+    border-color: var(--stamp);
+    color: var(--ink);
+  }
+}
+
+/* A status note: the text itself, in serif. Clamped in lists; the time links to the full note. */
+.note {
+  font-family: var(--font-body);
+  font-size: var(--text-ui);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.note > * {
+  margin: 0;
+}
+
+.note > * + * {
+  margin-top: var(--space-2);
+}
+
+.note--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.note a,
+.prose a {
+  overflow-wrap: anywhere;
+}
+
+/* --- The vote mark -----------------------------------------------------------------------------
+ * A tally mark with a point: adding your mark to the count. Outlined in stamp violet, the color
+ * of the one mark a person makes. Press feedback (emil-design-eng, animate): scale 0.95 on
+ * :active over --duration-press with the strong ease-out, transform only, and a fill so the press
+ * still reads on a small glyph and under reduced motion. */
+
+.vote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2rem;
+}
+
+.vote__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 1.75rem;
+  color: var(--stamp);
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+.vote__mark svg {
+  width: 0.625rem;
+  height: 1.375rem;
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  transition: fill var(--duration-press) ease;
+}
+
+.vote__mark:active {
+  transform: scale(0.95);
+}
+
+.vote__mark:active svg {
+  fill: currentColor;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .vote__mark:hover svg {
+    fill: color-mix(in srgb, currentColor 22%, transparent);
+  }
+}
+
+.vote__points {
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.vote--comment {
+  min-width: 0;
+}
+
+.vote--comment .vote__mark {
+  width: 1.5rem;
+  height: 1.75rem;
+}
+
+.vote--comment .vote__mark svg {
+  width: 0.5rem;
+  height: 1.0625rem;
+}
+
+/* --- Pager and empty states ------------------------------------------------------------------- */
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.pager a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--ink-muted);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+.pager a:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pager a:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+}
+
+.empty {
+  max-width: 36rem;
+  padding-block: var(--space-6);
+}
+
+.empty__title {
+  margin-bottom: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 650;
+  line-height: var(--leading-heading);
+}
+
+.empty p:not(.empty__title) {
+  color: var(--ink-muted);
+}
+
+/* --- The item page -------------------------------------------------------------------------- */
+
+.item-head {
+  padding-block: var(--space-6) var(--space-5);
+}
+
+.item-head__title {
+  max-width: 32ch;
+  font-size: var(--text-h2);
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.item-page--post .item-head__title {
+  max-width: 24ch;
+  font-size: var(--text-h1);
+  font-weight: 780;
+}
+
+.item-head__link {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.note--page {
+  max-width: var(--measure);
+  font-size: var(--text-lead);
+  line-height: 1.5;
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.byline .meta {
+  margin: 0;
+}
+
+.item-text {
+  margin-bottom: var(--space-5);
+}
+
+/* The long-form reading view: Source Serif 4 at 18px on phones, 21px on wide screens, capped near
+ * 66 characters a line. */
+.prose.reading {
+  max-width: var(--measure);
+  font-size: var(--text-reading);
+  line-height: var(--leading-body);
+  hyphens: auto;
+}
+
+.reading > h2 {
+  font-size: var(--text-reading-h2);
+}
+
+.reading > h3 {
+  font-size: var(--text-reading-h3);
+  font-stretch: var(--stretch-ui);
+}
+
+.prose > h4,
+.prose > h5,
+.prose > h6 {
+  font-size: var(--text-ui);
+  margin-top: var(--space-5);
+}
+
+.prose pre {
+  background: var(--bg-raised);
+  color: var(--ink);
+  hyphens: none;
+}
+
+.prose pre code {
+  font-size: inherit;
+}
+
+.prose li > p {
+  margin: 0;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.prose table {
+  border-collapse: collapse;
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-variant-numeric: tabular-nums;
+  hyphens: none;
+}
+
+.prose th,
+.prose td {
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+  text-align: start;
+  vertical-align: top;
+}
+
+.prose td:not(:first-child) {
+  white-space: nowrap;
+}
+
+.prose th {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* --- Comments ---------------------------------------------------------------------------------
+ * The fold toggle sits at the left of the head row; replies indent under it with one guide line
+ * per level. Indentation shrinks after a few levels on phones, and after eight everywhere. */
+
+.discussion {
+  padding-block: var(--space-6) var(--space-7);
+  background: var(--bg-raised);
+}
+
+.discussion__title {
+  font-size: var(--text-h3);
+}
+
+.discussion__note {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+}
+
+.comments,
+.c-children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comments {
+  margin-top: var(--space-5);
+}
+
+.comment {
+  position: relative;
+  margin-top: var(--space-4);
+}
+
+.comments > .comment:first-child {
+  margin-top: 0;
+}
+
+/* A comment linked to directly (#c123): its head is stamped, so the reader sees which one. */
+.comment {
+  scroll-margin-top: var(--space-5);
+}
+
+.comment:target > .c-head {
+  background: color-mix(in srgb, var(--stamp) 12%, transparent);
+  border-radius: var(--radius-tick);
+}
+
+.comment:target > .c-head .c-author {
+  color: var(--stamp);
+}
+
+.c-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-height: 1.75rem;
+  padding-left: 1.75rem;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+}
+
+.c-head a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.c-head .c-author {
+  color: var(--ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.c-points {
+  font-variant-numeric: tabular-nums;
+}
+
+.c-removed {
+  color: var(--ink-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .c-head a:hover {
+    color: var(--ink);
+    text-decoration-line: underline;
+  }
+}
+
+.c-folded {
+  display: none;
+}
+
+.comment:has(> .c-fold:not([open])) > .c-head .c-folded {
+  display: inline;
+}
+
+.c-toggle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.c-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.c-toggle::before {
+  content: "\2212";
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid var(--ink-muted);
+  border-radius: var(--radius-tick);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1;
+  transition: transform var(--duration-press) var(--ease-out);
+}
+
+.c-fold:not([open]) > .c-toggle::before {
+  content: "+";
+}
+
+.c-toggle:active::before {
+  transform: scale(0.95);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .c-toggle:hover::before {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+}
+
+/* Fold and unfold (emil-design-eng, animate): state indication, occasional, so a standard
+ * animation. Opacity always; height only without reduced motion, where interpolate-size makes
+ * "auto" animatable. Browsers without ::details-content snap open and shut. */
+.c-fold::details-content {
+  opacity: 0;
+  transition:
+    opacity var(--duration-fold) var(--ease-out),
+    content-visibility var(--duration-fold) allow-discrete;
+}
+
+.c-fold[open]::details-content {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .c-fold {
+    interpolate-size: allow-keywords;
+  }
+
+  .c-fold::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height var(--duration-fold) var(--ease-out),
+      opacity var(--duration-fold) var(--ease-out),
+      content-visibility var(--duration-fold) allow-discrete;
+  }
+
+  .c-fold[open]::details-content {
+    height: auto;
+  }
+
+  /* Folding is the system answering a click: quicker than unfolding. */
+  .c-fold:not([open])::details-content {
+    transition-duration: var(--duration-fold-close);
+  }
+}
+
+.c-body {
+  max-width: var(--measure);
+  padding-left: 1.75rem;
+  font-size: var(--text-comment);
+  line-height: 1.55;
+}
+
+.c-body.prose > * + * {
+  margin-top: var(--space-3);
+}
+
+.c-body pre {
+  font-size: var(--text-caption);
+}
+
+.discussion .prose pre,
+.discussion .prose :not(pre) > code {
+  background: var(--bg);
+}
+
+.c-children {
+  margin-left: 0.875rem;
+  padding-left: 0.875rem;
+  border-left: 1px solid var(--line);
+}
+
+@media (max-width: 40rem) {
+  .c-children--deep {
+    margin-left: 0;
+    padding-left: var(--indent-deep);
+  }
+}
+
+.c-children--deeper {
+  margin-left: 0;
+  padding-left: var(--indent-deep);
+}
+
+/* --- Profiles --------------------------------------------------------------------------------- */
+
+.profile {
+  padding-block: var(--space-6) 0;
+}
+
+.profile__login {
+  font-size: var(--text-h1);
+  overflow-wrap: anywhere;
+}
+
+.profile__name {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--text-lead);
+}
+
+.profile__roles {
+  margin: var(--space-3) 0 0;
+}
+
+.profile__bio {
+  max-width: var(--measure);
+  margin: var(--space-4) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-4) var(--space-5);
+  max-width: 48rem;
+  margin: var(--space-5) 0 0;
+  font-family: var(--font-display);
+}
+
+.facts dt {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+}
+
+.facts dd {
+  margin: 0;
+  font-size: var(--text-ui);
+  overflow-wrap: anywhere;
+}
+
+/* A role: stamped in violet. Banned is dashed, like work that is not running on the sibling. */
+.role {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 0.4em;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-tick);
+  color: var(--stamp);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.45;
+  vertical-align: 0.1em;
+}
+
+.profile__roles .role:first-child {
+  margin-left: 0;
+}
+
+.role--banned {
+  border-style: dashed;
+  color: var(--ink-muted);
+}
+
+/* --- The invite tree -------------------------------------------------------------------------- */
+
+.tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-display);
+}
+
+.tree .tree {
+  margin-left: 0.4rem;
+  padding-left: var(--indent);
+  border-left: 1px solid var(--line);
+}
+
+.tree li {
+  margin-top: var(--space-2);
+}
+
+.wrap > .tree > li + li {
+  margin-top: var(--space-5);
+}
+
+.tree__member a {
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tree__member a:hover {
+    text-decoration-line: underline;
+  }
+}
+
+.tree__joined {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+
+/* --- The moderation log ----------------------------------------------------------------------- */
+
+.modlog {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+}
+
+.modlog th {
+  color: var(--ink-muted);
+  font-weight: 600;
+  text-align: start;
+}
+
+.modlog th,
+.modlog td {
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.modlog td:last-child {
+  font-family: var(--font-body);
+  font-size: var(--text-ui);
+}
+
+.modlog td:first-child {
+  white-space: nowrap;
+}
+
+.modlog__subject {
+  max-width: 22rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 48rem) {
+  .modlog thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .modlog,
+  .modlog tbody,
+  .modlog tr,
+  .modlog td {
+    display: block;
+  }
+
+  .modlog tr {
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .modlog td {
+    padding: var(--space-1) 0;
+    border: 0;
+    max-width: none;
+  }
+
+  .modlog td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--ink-muted);
+    font-family: var(--font-display);
+    font-size: var(--text-caption);
+  }
+}
+
+/* --- About ------------------------------------------------------------------------------------ */
+
+.tag-list li {
+  overflow-wrap: anywhere;
+}
+
+/* --- Footer ----------------------------------------------------------------------------------- */
+
+.site-footer {
+  padding-block: var(--space-6);
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+}
+
+.site-footer__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-5) var(--space-8);
+}
+
+.site-footer__brand p {
+  max-width: 28rem;
+  margin: 0;
+}
+
+.site-footer__brand .site-footer__name {
+  margin-bottom: var(--space-2);
+}
+
+.site-footer__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink);
+  font-stretch: var(--stretch-display);
+  font-size: var(--text-ui);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.site-footer ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer li + li {
+  margin-top: var(--space-1);
+}
+
+.site-footer nav a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-footer nav a:hover {
+    color: var(--stamp);
+    text-decoration-line: underline;
+  }
+}
+
+.site-footer__legal {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
+  .site-footer__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .site-footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Page navigation --------------------------------------------------------------------------
+ * Cross-document view transitions (emil-design-eng, animate): navigation is frequent, so the
+ * root crossfade is short; the site bar does not move; a post's title morphs from the list into
+ * the item heading (spatial consistency). None of it runs under reduced motion. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  .bar {
+    view-transition-name: site-bar;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--duration-page);
+    animation-timing-function: ease;
+  }
+
+  ::view-transition-group(*) {
+    animation-duration: var(--duration-morph);
+    animation-timing-function: var(--ease-in-out);
+  }
+
+  ::view-transition-group(site-bar) {
+    animation: none;
+  }
+}
