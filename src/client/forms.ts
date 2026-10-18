@@ -5,6 +5,8 @@
 // - Character counts: "312 characters left" under fields with a limit (the server enforces it).
 // - Tags: once three are picked, the rest are disabled until one is unpicked.
 // - A form being sent says so on its main button and cannot be sent twice.
+// - Leaving a page with unsent writing asks first. The listener is added only while something is
+//   unsent, so pages stay eligible for the back/forward cache.
 
 const csrf = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
 const numbers = new Intl.NumberFormat('en-US')
@@ -76,6 +78,31 @@ function count(field: HTMLTextAreaElement | HTMLInputElement): void {
   out.classList.toggle('field__count--over', left < 0)
 }
 
+// --- Unsent writing ------------------------------------------------------------------------------
+
+const dirty = new Set<HTMLFormElement>()
+
+function warn(event: BeforeUnloadEvent): void {
+  event.preventDefault()
+}
+
+function track(): void {
+  for (const form of dirty) if (!form.isConnected) dirty.delete(form)
+  if (dirty.size > 0) window.addEventListener('beforeunload', warn)
+  else window.removeEventListener('beforeunload', warn)
+}
+
+document.addEventListener('input', (event) => {
+  const field = event.target
+  if (field instanceof HTMLTextAreaElement && field.form?.classList.contains('form')) {
+    if (field.value.trim() === field.defaultValue.trim()) dirty.delete(field.form)
+    else dirty.add(field.form)
+    track()
+  }
+})
+
+document.addEventListener('heka:sent', track)
+
 document.addEventListener('input', (event) => {
   const field = event.target
   if (
@@ -125,6 +152,8 @@ document.addEventListener('submit', (event) => {
   for (const box of form.querySelectorAll<HTMLInputElement>('fieldset.tag-picker input:disabled')) {
     box.disabled = false
   }
+  dirty.delete(form)
+  track()
   // After this tick, so the browser has already read the submitter's name and value.
   window.setTimeout(() => {
     if (event.defaultPrevented) return

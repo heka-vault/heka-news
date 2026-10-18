@@ -28,8 +28,8 @@ export function ErrorSummary({
     <div class="error-summary" role="alert">
       <p class="error-summary__title">
         {entries.length === 1
-          ? 'One thing to fix before this can be saved:'
-          : `${entries.length} things to fix before this can be saved:`}
+          ? 'One thing to fix first:'
+          : `${entries.length} things to fix first:`}
       </p>
       <ul>
         {entries.map(([name, message]) => (

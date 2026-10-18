@@ -66,6 +66,7 @@ async function send(form: HTMLFormElement, comment: HTMLElement): Promise<void> 
     // Rendered by the server from sanitized markdown: the same markup as the thread around it.
     list.insertAdjacentHTML('beforeend', data.html)
     form.remove()
+    document.dispatchEvent(new CustomEvent('heka:sent'))
     const added = document.getElementById(`c${data.id}`)
     added?.classList.add('comment--new')
     added?.querySelector<HTMLElement>('.c-author')?.focus()
@@ -101,6 +102,11 @@ document.addEventListener('click', (event) => {
   const id = link.dataset.for
   const comment = id ? document.getElementById(`c${id}`) : null
   if (!id || !comment) return
+  // Deep in a thread on a phone there is no room to write in place: the link opens the reply page,
+  // which quotes the comment and gives the form the full width (break-ui).
+  const room =
+    comment.querySelector(':scope > .c-fold > .c-actions')?.getBoundingClientRect().width ?? 0
+  if (room < 288) return
   event.preventDefault()
 
   const open = document.querySelector<HTMLFormElement>(`form.reply-inline[data-for="${id}"]`)

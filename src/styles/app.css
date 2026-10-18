@@ -144,6 +144,11 @@ main:has(> .discussion:last-child) {
     gap: 0 var(--space-5);
   }
 
+  /* Signed in there are five or six lists; they still fit one row at 360px. */
+  .bar__nav ul:has(> li:nth-child(5)) {
+    gap: 0 var(--space-3);
+  }
+
   .bar__nav a {
     padding-block: var(--space-2) var(--space-3);
   }
@@ -1116,4 +1121,931 @@ main:has(> .discussion:last-child) {
   ::view-transition-group(site-bar) {
     animation: none;
   }
+}
+
+/* --- Members: the signed-in bar ----------------------------------------------------------------
+ * "Submit" takes the outlined slot "Sign in" had; the login beside it is cut with an ellipsis so a
+ * 39-character login cannot push the bar onto a third row. */
+
+.bar__member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-left: auto;
+}
+
+.bar__member .bar__signin {
+  margin-left: 0;
+}
+
+.bar__me {
+  display: inline-block;
+  max-width: 14ch;
+  padding-block: var(--space-2);
+  overflow: hidden;
+  color: var(--bar-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar__me,
+.kind-tab,
+.tag-option,
+.choice,
+.c-action,
+.button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bar__me:hover {
+    color: var(--bar-ink);
+    text-decoration-line: underline;
+  }
+}
+
+.bar__me-short {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .bar__member {
+    order: 2;
+  }
+
+  .bar__me {
+    max-width: 9ch;
+  }
+}
+
+/* Under 384px the wordmark, a login and "Submit" do not fit on one row (break-ui: a 35-character
+ * login pushed the bar to three rows at 360px). The link then says "You"; its accessible name is
+ * still the login. */
+@media (max-width: 24rem) {
+  .bar__me-login {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .bar__me-short {
+    display: inline;
+  }
+}
+
+/* --- Members: the vote as a form ------------------------------------------------------------- *
+ * Signed in, the mark is a toggle button. Pressed (your vote is in) it stays filled; on your own
+ * item it is filled and inert: your own point. */
+
+form.vote {
+  margin: 0;
+}
+
+button.vote__mark {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.vote__mark[aria-pressed="true"] svg,
+.vote__mark--own svg {
+  fill: currentColor;
+}
+
+.vote__mark--own {
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .vote__mark[aria-pressed="true"]:hover svg {
+    fill: color-mix(in srgb, currentColor 60%, transparent);
+  }
+}
+
+/* --- Members: actions on items and comments --------------------------------------------------- */
+
+.item-actions,
+.c-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+}
+
+.c-actions {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.75rem;
+}
+
+.c-action {
+  display: inline-block;
+  padding-block: 0.1875rem;
+  color: var(--ink-muted);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .c-action:hover {
+    color: var(--ink);
+    text-decoration-line: underline;
+  }
+}
+
+.item-actions__note {
+  color: var(--stop);
+}
+
+.c-edited {
+  color: var(--ink-muted);
+}
+
+/* A reply just posted in place: tinted like a permalinked comment, no motion. */
+.comment--new > .c-head {
+  background: color-mix(in srgb, var(--stamp) 12%, transparent);
+  border-radius: var(--radius-tick);
+}
+
+/* --- Members: forms ----------------------------------------------------------------------------
+ * Labels above, hints under the label, the field, then its count and its error. Inputs are at
+ * least 16px (--text-ui) so a phone never zooms into one. */
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--measure);
+  font-size: var(--text-ui);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field__label {
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+.field__hint,
+.field__count {
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+}
+
+.field__hint code {
+  font-size: 0.95em;
+}
+
+.field__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.field__count--over,
+.field__error {
+  color: var(--stop);
+}
+
+.field__error {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+.field__fixed {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+}
+
+.input {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: var(--space-1);
+  padding: 0.55rem 0.75rem;
+  border: var(--field-line) solid var(--field-border);
+  border-radius: var(--radius-control);
+  background: var(--field-bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  line-height: 1.4;
+  transition: border-color var(--duration) ease;
+}
+
+.input::placeholder {
+  color: var(--ink-muted);
+  opacity: 1;
+}
+
+.input:focus-visible {
+  outline-offset: 1px;
+  border-color: var(--stamp);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .input:hover {
+    border-color: var(--ink);
+  }
+}
+
+.field--invalid .input,
+.input[aria-invalid="true"] {
+  border-color: var(--stop);
+}
+
+.input--area {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+/* What a member writes is typed in the face it will be read in. */
+.input--prose {
+  font-family: var(--font-body);
+  font-size: var(--text-comment);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.field--tall .input--area {
+  min-height: 24rem;
+}
+
+.input--mono {
+  font-family: var(--font-code);
+  font-size: var(--text-ui);
+}
+
+.input--small {
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+.form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.form__status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--stop);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+}
+
+.form__status:empty {
+  display: none;
+}
+
+.form__cancel {
+  min-height: 2.75rem;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  font-weight: 500;
+  line-height: 2.75rem;
+  cursor: pointer;
+}
+
+/* The error summary: a stop-red rule, a sentence, links to each field. */
+.error-summary {
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--stop);
+  background: var(--bg-raised);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+}
+
+.error-summary p,
+.error-summary ul {
+  margin: 0;
+}
+
+.error-summary ul {
+  margin-top: var(--space-2);
+  padding-left: 1.1rem;
+}
+
+.error-summary li + li {
+  margin-top: var(--space-1);
+}
+
+.error-summary__title {
+  font-weight: 650;
+}
+
+.error-summary a {
+  font-weight: 600;
+}
+
+/* Buttons beside the base set. */
+.button {
+  transition:
+    background-color var(--duration) ease,
+    border-color var(--duration) ease,
+    color var(--duration) ease,
+    transform var(--duration-press) var(--ease-out);
+  cursor: pointer;
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+.button[disabled],
+.form[data-sending="true"] .button[value="post"] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.button--small {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.9rem;
+  font-size: var(--text-caption);
+}
+
+.button--danger {
+  border-color: var(--stop);
+  background: transparent;
+  color: var(--stop);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button--danger:hover {
+    border-color: var(--stop);
+    background: var(--stop);
+    color: var(--bg);
+  }
+}
+
+.button--github {
+  gap: var(--space-2);
+}
+
+.button--github svg {
+  flex-shrink: 0;
+}
+
+/* The preview: a proof, outlined dashed like the other things on this site that are not live. */
+.preview {
+  padding: var(--space-4);
+  border: 1.5px dashed var(--ink-muted);
+  border-radius: var(--radius-frame);
+}
+
+.preview[hidden] {
+  display: none;
+}
+
+.preview__label {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
+.preview__body {
+  font-size: var(--text-comment);
+  overflow-wrap: anywhere;
+}
+
+.preview__body > * + * {
+  margin-top: var(--space-3);
+}
+
+.preview__empty {
+  color: var(--ink-muted);
+}
+
+/* --- Members: choosing (tags, kinds, flag reasons) ------------------------------------------- *
+ * The native control stays in the page for keyboards and screen readers; the label is what you
+ * see. A choice is a person's mark, so a checked one takes the violet stamp. */
+
+.tag-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.tag-option,
+.choice {
+  position: relative;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.tag-option input,
+.choice input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.tag-option span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.7em;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tick);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+  transition:
+    border-color var(--duration) ease,
+    color var(--duration) ease,
+    background-color var(--duration) ease;
+}
+
+.tag-option input:checked + span {
+  border-color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 12%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tag-option input:checked + span::before {
+  content: "";
+  width: 0.3rem;
+  height: 0.9rem;
+  margin-right: 0.45em;
+  border-radius: var(--radius-tick);
+  background: var(--stamp);
+}
+
+.tag-option input:disabled + span {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tag-option input:focus-visible + span,
+.choice input:focus-visible + .choice__text {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tag-option input:not(:disabled) + span:hover {
+    border-color: var(--stamp);
+    color: var(--ink);
+  }
+}
+
+@media (pointer: coarse) {
+  .tag-option span {
+    min-height: 2.75rem;
+  }
+}
+
+.choices {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.choice__text {
+  display: grid;
+  gap: 0.125rem;
+  min-height: 2.75rem;
+  padding: var(--space-3) var(--space-4);
+  border: var(--field-line) solid var(--line);
+  border-radius: var(--radius-control);
+  font-family: var(--font-display);
+  transition: border-color var(--duration) ease;
+}
+
+.choice__label {
+  font-weight: 600;
+}
+
+.choice__hint {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+}
+
+.choice input:checked + .choice__text {
+  border-color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 8%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice:hover .choice__text {
+    border-color: var(--ink-muted);
+  }
+}
+
+/* The kind of item: three links, each a labelled slot. Phones show the labels only. */
+.kind-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  max-width: var(--measure);
+  margin-bottom: var(--space-6);
+}
+
+.kind-tab {
+  display: grid;
+  align-content: start;
+  gap: 0.125rem;
+  min-height: 2.75rem;
+  padding: var(--space-3) var(--space-4);
+  border: var(--field-line) solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+  font-family: var(--font-display);
+  text-decoration: none;
+  touch-action: manipulation;
+  transition:
+    border-color var(--duration) ease,
+    transform var(--duration-press) var(--ease-out);
+}
+
+.kind-tab:active {
+  transform: scale(0.97);
+}
+
+.kind-tab[aria-current="page"] {
+  border-color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 8%, transparent);
+}
+
+.kind-tab__label {
+  font-weight: 650;
+}
+
+.kind-tab[aria-current="page"] .kind-tab__label {
+  color: var(--stamp);
+}
+
+.kind-tab__hint {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .kind-tab:hover {
+    border-color: var(--ink-muted);
+    color: var(--ink);
+  }
+
+  .kind-tab[aria-current="page"]:hover {
+    border-color: var(--stamp);
+  }
+}
+
+@media (max-width: 40rem) {
+  .kind-tab {
+    place-content: center;
+    padding: var(--space-2);
+    text-align: center;
+  }
+
+  .kind-tab__hint {
+    display: none;
+  }
+}
+
+/* --- Members: comment forms ------------------------------------------------------------------- */
+
+.discussion .comment-form {
+  margin-top: var(--space-5);
+}
+
+/* On the raised band the field takes the floor colour, so it reads as paper on the band. */
+.discussion .input {
+  background: var(--bg);
+}
+
+.comment-form .field__label {
+  font-size: var(--text-ui);
+}
+
+/* A reply opened in place sits on its comment's guide line and fades in, 4px from above. */
+.reply-inline {
+  margin: var(--space-3) 0 var(--space-2) 1.75rem;
+  padding-left: 0.875rem;
+  border-left: 1px solid var(--line);
+  gap: var(--space-3);
+  transition:
+    opacity var(--duration-fold) var(--ease-out),
+    translate var(--duration-fold) var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 -0.25rem;
+  }
+}
+
+/* Under reduced motion --duration-fold is 0ms (tokens.css): the form is simply there. */
+
+/* A comment quoted at the top of a reply, edit or confirm page. */
+.quoted {
+  max-width: var(--measure);
+  margin: 0 0 var(--space-6);
+  padding: var(--space-4);
+  border-left: 3px solid var(--line);
+  background: var(--bg-raised);
+}
+
+.quoted__head,
+.listing__head {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.quoted__head a,
+.listing__head a {
+  display: inline-block;
+  padding-block: 0.1875rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.quoted__head .c-author,
+.listing__head .c-author {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quoted__head a:hover,
+  .listing__head a:hover {
+    color: var(--ink);
+    text-decoration-line: underline;
+  }
+}
+
+.quoted__body,
+.listing__body {
+  font-size: var(--text-comment);
+  line-height: 1.55;
+}
+
+.quoted__body > * + *,
+.listing__body > * + * {
+  margin-top: var(--space-3);
+}
+
+/* Comments away from their thread: /replies, profiles, the queue. */
+.listings {
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--measure);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --- Members: confirm, flag, message pages ---------------------------------------------------- */
+
+.confirm {
+  max-width: var(--measure);
+  margin-bottom: var(--space-5);
+}
+
+.confirm > p {
+  max-width: var(--measure);
+}
+
+.confirm__what {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.message .lede {
+  max-width: var(--measure);
+}
+
+/* --- Members: settings and invitations -------------------------------------------------------- */
+
+.settings > section {
+  max-width: var(--measure);
+}
+
+.section-title--first {
+  margin-top: 0;
+}
+
+.section-intro {
+  max-width: var(--measure);
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+}
+
+.callout {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border-left: 3px solid var(--stamp);
+  background: var(--bg-raised);
+}
+
+.callout p {
+  max-width: var(--measure);
+}
+
+.copy-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.copy-field .input {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+
+.notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--stamp);
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+}
+
+.form--inline {
+  margin-bottom: var(--space-5);
+}
+
+.invites {
+  display: grid;
+  gap: var(--space-3);
+  max-width: var(--measure);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-display);
+}
+
+.invite {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--space-4);
+  align-items: start;
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.invite__line,
+.invite__meta {
+  grid-column: 1;
+  margin: 0;
+}
+
+.invite__meta {
+  color: var(--ink-muted);
+  font-size: var(--text-caption);
+}
+
+.invite__revoke {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.invite__status {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-tick);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.invite--open .invite__status {
+  color: var(--stamp);
+}
+
+.invite--expired .invite__status,
+.invite--revoked .invite__status {
+  border-style: dashed;
+  color: var(--ink-muted);
+}
+
+.invite__note {
+  overflow-wrap: anywhere;
+}
+
+.dev-accounts {
+  columns: 2 12rem;
+  font-family: var(--font-display);
+}
+
+.dev-accounts a {
+  display: inline-block;
+  padding-block: 0.1875rem;
+  overflow-wrap: anywhere;
+}
+
+.profile__own {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-ui);
+}
+
+.profile__bio.prose > * + * {
+  margin-top: var(--space-3);
+}
+
+/* --- Moderators: the queue and inline decisions ----------------------------------------------- */
+
+.modq__list {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.modq__entry {
+  max-width: 48rem;
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.modq__entry--compact {
+  padding-bottom: var(--space-4);
+}
+
+.modq__flags {
+  margin: var(--space-2) 0;
+  color: var(--stop);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+}
+
+.decide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 40rem;
+}
+
+.decide .input {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+.decide--profile {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.decide__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.decide__row .input {
+  flex: 1 1 14rem;
 }

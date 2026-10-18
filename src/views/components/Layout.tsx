@@ -152,7 +152,10 @@ export function Layout(props: LayoutProps) {
                   Submit
                 </a>
                 <a class="bar__me" href={`/u/${viewer.login}`} translate="no" title={viewer.login}>
-                  {viewer.login}
+                  <span class="bar__me-login">{viewer.login}</span>
+                  <span class="bar__me-short" aria-hidden="true">
+                    You
+                  </span>
                 </a>
               </div>
             ) : (

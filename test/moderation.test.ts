@@ -125,10 +125,10 @@ describe('every moderator action writes the public log', () => {
       reason: 'Spam ring.',
     })
     const open = fx.db
-      .query<{ n: number }, [number]>(
-        'SELECT count(*) AS n FROM invites WHERE inviter_id = ? AND revoked_at IS NULL',
+      .query<{ n: number }, [number, number]>(
+        'SELECT count(*) AS n FROM invites WHERE inviter_id = ? AND revoked_at IS NULL AND expires_at > ?',
       )
-      .get(author.id)
+      .get(author.id, fx.now())
     expect(open?.n).toBe(0)
     // The old cookie no longer signs anyone in.
     expect(await (await author.get('/')).text()).toContain('Sign in')

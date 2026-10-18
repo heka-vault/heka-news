@@ -166,6 +166,11 @@ export function InvitePage(props: { ctx: PageContext; code: string; invite: Invi
                     <time datetime={isoTime(invite.expiresAt)}>{longDate(invite.expiresAt)}</time>.
                   </p>
                 </>
+              ) : ctx.signin === 'dev' ? (
+                <p>
+                  This is a development copy without GitHub, so an invitation cannot be accepted
+                  here. <a href="/signin">Sign in as a seeded member</a> instead.
+                </p>
               ) : (
                 <p>
                   Sign-in opens soon. Come back to this link then; it works until{' '}
@@ -360,8 +365,8 @@ export function SettingsPage(props: {
             Signed in as{' '}
             <a href={`/u/${props.login}`} translate="no">
               {props.login}
-            </a>{' '}
-            through GitHub.
+            </a>
+            . Your login and avatar come from GitHub.
           </p>
         </header>
 

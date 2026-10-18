@@ -251,3 +251,38 @@ uses for something not live (the banned role).
    and a moderator's reason field needs room.
 6. **Toasts for "Saved".** Not used: the page you land on shows the result (the item, the comment
    in its thread, "Saved." above the profile form).
+
+### Reviews while building (phase 3)
+
+**Motion** (review-animations on the diff; verdict: approve)
+
+| Before | After | Why |
+|---|---|---|
+| Reply form inserted with no transition | `@starting-style` opacity 0 and `translate: 0 -0.25rem`, 200ms `--ease-out` | Occasional, spatial: it belongs to the comment above; transform and opacity only, under 300ms |
+| A pressed vote mark that only filled while held | Fill stays while `aria-pressed="true"`; same 120ms fill transition | State, not motion: the count is data and does not animate |
+| Buttons without press feedback | `:active` scale 0.97, 120ms `--ease-out`, on `transform` only | Pressables answer the press; hover gated to fine pointers |
+| A spinner while a form sends | The button's words change ("Posting…") | Once per form; a spinner would be motion with no information |
+
+Under reduced motion every duration token is 0ms, so the reply form simply appears; that matches
+the comment fold. No `transition: all`, no keyframes on anything a member triggers.
+
+**Worst cases** (break-ui, against the seed, which now also has a flagged item, a flagged comment
+and invitations in every state)
+
+| # | Severity | Field | Worst case | What happened | Fix |
+|---|---|---|---|---|---|
+| 1 | Broken | login in the bar | `aleksandra-wisniewska-kowalczyk-ops` at 360px | Wordmark, login and "Submit" did not fit: the bar took three rows | Under 24rem the link says "You"; the login stays its accessible name |
+| 2 | Broken | reply in place | the fourteenth level of a thread at 390px | A 150px textarea, one word per line | When the actions row is under 288px wide, "reply" opens the reply page |
+| 3 | Ugly | moderator's lists | six lists at 360px | "Mod" wrapped onto its own row | The lists' gap tightens when there are five or more |
+| 4 | Ugly | invitation note | 200 characters of German | "Withdraw" centred against seven lines | Top-aligned |
+| 5 | Fragile | error copy | "should start with https://." | Doubled punctuation | "Paste the whole address, starting with https." |
+| — | Holds | title, URL, body | 160 characters, unbreakable addresses, 501 characters | Wrap; counts and server limits agree with the schema | — |
+| — | Holds | tags | four picked | The fourth is disabled with JavaScript and refused without it | — |
+| — | Holds | mixed direction | Arabic and English in /replies | Each block finds its direction | — |
+| — | Holds | empty states | no replies, no flags, no invitations, no tags | Each says what will appear | — |
+
+**Guidelines** (web-design-guidelines): labels on every control, `aria-describedby` for hints,
+counts and errors, `aria-invalid`, the first invalid field focused, placeholders ending in "…",
+16px inputs, `autocomplete` set, live regions for previews and send errors, confirmation pages
+before deleting, and a warning before leaving unsent writing (added after this review). Kept
+against the generic rules, as before: sentence case, and the GitHub mark as the only icon.

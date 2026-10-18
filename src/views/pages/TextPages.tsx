@@ -52,13 +52,12 @@ export function AboutPage({
           </p>
           <p>
             You sign in with GitHub. If a member has invited you, the link in your invitation
-            creates your account; after that, <a href="/signin">sign in</a> from any page.
+            creates your account. After that, <a href="/signin">sign in</a> from any page.
             {ctx.signin === 'closed' && ' Sign-in opens soon; until then the site is read-only.'}
           </p>
           <p>
-            Members can post up to 10 items, 60 comments and 300 votes an hour. Authors can edit
-            what they wrote for two hours and delete it at any time. An item that three members flag
-            leaves the front page until a moderator looks at it.
+            Authors can edit what they wrote for two hours and delete it at any time. An item that
+            three members flag leaves the front page until a moderator looks at it.
           </p>
 
           <h2>What gets posted</h2>

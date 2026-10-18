@@ -106,7 +106,7 @@ export function validateItem(
     else if (raw.length > LIMITS.url)
       errors.url = `An address can be up to ${plural(LIMITS.url, 'characters')}.`
     else if (!domainOf(raw))
-      errors.url = 'That is not a web address. It should start with https://.'
+      errors.url = 'That is not a web address. Paste the whole address, starting with https.'
     else url = new URL(raw).toString()
   }
 
