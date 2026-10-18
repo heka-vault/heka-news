@@ -229,7 +229,7 @@ describe('joining', () => {
     expect(await res.text()).toContain('There is no invitation at this address')
   })
 
-  test('a returning member keeps their account; GitHub renames follow; moderator status mirrors MODERATORS', async () => {
+  test('a returning member keeps their account; GitHub renames follow; sign-in never demotes', async () => {
     let current = profile('Founder', 9)
     const fx = makeApp({ seed: false, env: GITHUB_ENV, github: fakeGitHub(() => current).client })
     await signInWithGitHub(fx)
@@ -237,9 +237,37 @@ describe('joining', () => {
     await signInWithGitHub(fx)
     const renamed = accountByLogin(fx.db, 'founder-renamed')
     expect(renamed).not.toBeNull()
-    // Renamed out of MODERATORS: no longer a moderator.
-    expect(renamed?.isModerator).toBe(false)
+    // Renamed out of MODERATORS: still a moderator until another moderator removes them.
+    expect(renamed?.isModerator).toBe(true)
     expect(fx.db.query('SELECT count(*) AS n FROM users').get()).toEqual({ n: 1 })
+  })
+
+  test('a founding moderator is made a moderator again at sign-in', async () => {
+    const fx = makeApp({
+      seed: false,
+      env: GITHUB_ENV,
+      github: fakeGitHub(profile('Founder', 9)).client,
+    })
+    await signInWithGitHub(fx)
+    fx.db.query("UPDATE users SET is_moderator = 0 WHERE login = 'Founder'").run()
+    await signInWithGitHub(fx)
+    expect(accountByLogin(fx.db, 'founder')?.isModerator).toBe(true)
+  })
+
+  test('a moderator made on the site stays one across sign-ins', async () => {
+    const fx = makeApp({ env: GITHUB_ENV, github: fakeGitHub(profile('quietfox', 77)).client })
+    fx.db.query("UPDATE users SET github_id = 77 WHERE login = 'quietfox'").run()
+    const mod = signIn(fx, 'ledgerline')
+    expect(
+      (await mod.post('/u/quietfox/make-moderator', { reason: 'Asked to help.' })).status,
+    ).toBe(303)
+    const { callback } = await signInWithGitHub(fx)
+    expect(callback.status).toBe(303)
+    expect(accountByLogin(fx.db, 'quietfox')?.isModerator).toBe(true)
+    // And a member who is not one stays not one.
+    fx.db.query("UPDATE users SET is_moderator = 0 WHERE login = 'quietfox'").run()
+    await signInWithGitHub(fx)
+    expect(accountByLogin(fx.db, 'quietfox')?.isModerator).toBe(false)
   })
 
   test('a banned member cannot sign in', async () => {

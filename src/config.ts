@@ -59,7 +59,10 @@ export interface Config {
   gitSha: string
   /** How many of the newest items compete for the front page (ADR 0004). */
   rankCandidates: number
-  /** GitHub logins of moderators, lowercased (ADR 0003). */
+  /**
+   * GitHub logins of the founding moderators, lowercased (ADR 0003). Signing in makes them
+   * moderators; moderators can make other members moderators from the site.
+   */
   moderators: string[]
   /** NODE_ENV is "production". */
   production: boolean
@@ -74,6 +77,11 @@ export interface Config {
   devSignIn: boolean
   /** Cookies carry Secure when PUBLIC_URL is https. */
   secureCookies: boolean
+}
+
+/** True for a login in MODERATORS: a founding moderator, who cannot be removed from the site. */
+export function isFoundingModerator(config: Pick<Config, 'moderators'>, login: string): boolean {
+  return config.moderators.includes(login.toLowerCase())
 }
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {

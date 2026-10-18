@@ -48,9 +48,74 @@ function BanForm({ ctx, user }: { ctx: PageContext; user: UserProfile }) {
   )
 }
 
+/** A moderator making a member a moderator, or removing one, with the reason for the log. */
+function RoleForm({ ctx, user }: { ctx: PageContext; user: UserProfile }) {
+  const make = !user.isModerator
+  return (
+    <form
+      class="decide decide--profile"
+      method="post"
+      action={`/u/${user.login}/${make ? 'make-moderator' : 'remove-moderator'}`}
+    >
+      <Csrf ctx={ctx} />
+      <label class="field__label" for="role-reason">
+        {make ? 'Make moderator' : 'Remove as moderator'}
+      </label>
+      <p class="field__hint" id="role-reason-hint">
+        {make
+          ? 'They get the moderator queue and every moderator tool. The reason is published in the moderation log.'
+          : 'They stay signed in, without moderator tools. Moderators cannot be banned, so do this first if you mean to ban them. The reason is published in the moderation log.'}
+      </p>
+      <div class="decide__row">
+        <input
+          class="input input--small"
+          id="role-reason"
+          name="reason"
+          maxlength={LIMITS.reason}
+          required
+          autocomplete="off"
+          aria-describedby="role-reason-hint"
+          placeholder="Reason, for the public log…"
+        />
+        <button
+          class={make ? 'button button--small' : 'button button--small button--danger'}
+          type="submit"
+        >
+          {make ? 'Make moderator' : 'Remove as moderator'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+/**
+ * What a moderator can do on someone else's profile. A banned member can only be unbanned; a
+ * moderator can be removed as moderator but not banned; a founding moderator neither.
+ */
+function ModTools(props: { ctx: PageContext; user: UserProfile; founding: boolean }) {
+  const { ctx, user } = props
+  if (user.banned) return <BanForm ctx={ctx} user={user} />
+  if (props.founding) {
+    return (
+      <p class="decide--profile field__hint">
+        Founding moderators are set in the site’s configuration, so they cannot be removed or banned
+        from here.
+      </p>
+    )
+  }
+  return (
+    <>
+      <RoleForm ctx={ctx} user={user} />
+      {!user.isModerator && <BanForm ctx={ctx} user={user} />}
+    </>
+  )
+}
+
 export function UserPage(props: {
   ctx: PageContext
   user: UserProfile
+  /** A login in MODERATORS: shown as a founding moderator, and cannot be removed from the site. */
+  founding: boolean
   items: ItemSummary[]
   comments: CommentListing[]
   page: number
@@ -85,7 +150,9 @@ export function UserPage(props: {
           )}
           {(user.isModerator || user.banned) && (
             <p class="profile__roles">
-              {user.isModerator && <span class="role">Moderator</span>}
+              {user.isModerator && (
+                <span class="role">{props.founding ? 'Founding moderator' : 'Moderator'}</span>
+              )}
               {user.banned && <span class="role role--banned">Banned</span>}
             </p>
           )}
@@ -134,8 +201,8 @@ export function UserPage(props: {
               </dd>
             </div>
           </dl>
-          {ctx.viewer?.isModerator && !self && !user.isModerator && (
-            <BanForm ctx={ctx} user={user} />
+          {ctx.viewer?.isModerator && !self && (
+            <ModTools ctx={ctx} user={user} founding={props.founding} />
           )}
         </header>
         <section aria-labelledby="items-heading">

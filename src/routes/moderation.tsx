@@ -1,8 +1,9 @@
 // Moderator routes (ADR 0003, 0007): the queue at /mod, removing and restoring items and
-// comments, keeping flagged ones, editing tags, banning and unbanning, revoking invitations and
-// adding tags. Every action requires a reason and writes the public log (src/db/moderation.ts).
+// comments, keeping flagged ones, editing tags, banning and unbanning, making members moderators
+// and removing them, revoking invitations and adding tags. Every action requires a reason and writes the public log (src/db/moderation.ts).
 // A missing reason brings back a page asking for one.
 
+import { isFoundingModerator } from '../config.ts'
 import { getComment } from '../db/comments.ts'
 import { flagQueue } from '../db/flags.ts'
 import { listOpenInvites } from '../db/invites.ts'
@@ -13,7 +14,9 @@ import {
   deleteComment,
   deleteItem,
   dismissFlags,
+  promoteModerator,
   recentRemovals,
+  removeModerator,
   restoreComment,
   restoreItem,
   retagItem,
@@ -39,12 +42,12 @@ import { ModQueuePage } from '../views/pages/ModQueuePage.tsx'
 import { type App, type C, guardPost, idParam, signinRedirect, type Web } from './web.ts'
 
 export function registerModeration(app: App, web: Web): void {
-  const { db, clock } = web
+  const { db, config, clock } = web
 
   const notModerator = (c: C) =>
     web.refuse(c, {
       title: 'Moderators only',
-      body: 'Three of us moderate. What we do is public in the moderation log.',
+      body: 'Only moderators can do this. What they do is public in the moderation log.',
     })
 
   /** GET pages: a signed-in moderator's context, or the response to send. */
@@ -435,7 +438,9 @@ export function registerModeration(app: App, web: Web): void {
       if (!result.ok && result.reason === 'moderator') {
         return web.refuse(c, {
           title: 'Moderators cannot be banned',
-          body: 'Take them out of MODERATORS first, then ban them.',
+          body: isFoundingModerator(config, account.login)
+            ? 'They are a founding moderator. Take them out of MODERATORS, remove them as moderator, then ban them.'
+            : 'Remove them as moderator first, then ban them.',
         })
       }
     }
@@ -443,6 +448,67 @@ export function registerModeration(app: App, web: Web): void {
   }
   app.post('/u/:login/ban', ban(false))
   app.post('/u/:login/unban', ban(true))
+
+  const rolePage = (
+    c: C,
+    ctx: PageContext,
+    login: string,
+    make: boolean,
+    reason: { value: string; error?: string },
+  ) =>
+    web.html(
+      c,
+      <ConfirmPage
+        ctx={ctx}
+        title={make ? `Make ${login} a moderator?` : `Remove ${login} as moderator?`}
+        action={`/u/${login}/${make ? 'make-moderator' : 'remove-moderator'}`}
+        button={make ? 'Make moderator' : 'Remove as moderator'}
+        sending="Saving…"
+        cancel={`/u/${login}`}
+        reason={reason}
+        danger={!make}
+      >
+        <p>
+          {make
+            ? 'From their next page on, they have the moderator queue and every moderator tool.'
+            : 'They keep their account and stay signed in. From their next page on, they have no moderator tools.'}
+        </p>
+      </ConfirmPage>,
+      422,
+    )
+
+  const ROLE_REFUSALS = {
+    self: {
+      title: 'You cannot change your own moderator status',
+      body: 'Ask another moderator to do it.',
+    },
+    banned: {
+      title: 'Banned members cannot be moderators',
+      body: 'Lift the ban first, then make them a moderator.',
+    },
+    founding: {
+      title: 'Founding moderators cannot be removed here',
+      body: 'They are listed in MODERATORS, and signing in makes them moderators again. Take them out of MODERATORS first, then remove them here.',
+    },
+  } as const
+
+  const role = (make: boolean) => async (c: C) => {
+    const login = c.req.param('login') ?? ''
+    const ok = await modPost(c, (ctx, reason) => rolePage(c, ctx, login, make, reason))
+    if (ok instanceof Response) return ok
+    const account = accountByLogin(db, login)
+    if (!account) return web.notFound(c)
+    const result = make
+      ? promoteModerator(db, account.id, ok.viewer.id, ok.reason, clock())
+      : removeModerator(db, account.id, ok.viewer.id, ok.reason, config.moderators, clock())
+    if (!result.ok && result.reason !== 'already') {
+      if (result.reason === 'missing') return web.notFound(c)
+      return web.refuse(c, ROLE_REFUSALS[result.reason], result.reason === 'banned' ? 409 : 403)
+    }
+    return c.redirect(`/u/${account.login}`, 303)
+  }
+  app.post('/u/:login/make-moderator', role(true))
+  app.post('/u/:login/remove-moderator', role(false))
 
   app.post('/mod/invites/:id/revoke', async (c) => {
     const id = idParam(c) ?? 0

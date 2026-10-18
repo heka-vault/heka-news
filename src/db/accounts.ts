@@ -1,5 +1,5 @@
 // Accounts at sign-in (ADR 0003, 0007): find the member by GitHub id, or create one, either as a
-// moderator bootstrapping the tree (no inviter) or by redeeming an invitation, in one transaction
+// founding moderator bootstrapping the tree (no inviter) or by redeeming an invitation, in one transaction
 // so an invitation is used exactly once.
 
 import { MARKDOWN_VERSION } from '../lib/markdown.ts'
@@ -20,25 +20,26 @@ function displayNameFrom(name: string | null): string | null {
 }
 
 /**
- * Refresh what GitHub owns on an existing member: the login (GitHub renames), the avatar, and
- * moderator status, which mirrors MODERATORS. False if the new login belongs to another account.
+ * Refresh what GitHub owns on an existing member: the login (GitHub renames) and the avatar. A
+ * founding moderator (a login in MODERATORS) is made a moderator; anyone else keeps the status
+ * they have, which moderators change from the site. False if the new login belongs to another
+ * account.
  */
 export function refreshAccount(
   db: Db,
   userId: number,
   identity: GitHubIdentity,
-  isModerator: boolean,
+  founding: boolean,
 ): boolean {
   const clash = db
     .query<{ id: number }, [string, number]>('SELECT id FROM users WHERE login = ? AND id <> ?')
     .get(identity.login, userId)
   if (clash) return false
-  db.query('UPDATE users SET login = ?, avatar_url = ?, is_moderator = ? WHERE id = ?').run(
-    identity.login,
-    identity.avatarUrl,
-    isModerator ? 1 : 0,
-    userId,
-  )
+  db.query(
+    `UPDATE users SET login = ?, avatar_url = ?,
+            is_moderator = CASE WHEN ? = 1 THEN 1 ELSE is_moderator END
+     WHERE id = ?`,
+  ).run(identity.login, identity.avatarUrl, founding ? 1 : 0, userId)
   return true
 }
 
@@ -82,7 +83,7 @@ function insertMember(
   return row.id
 }
 
-/** A moderator's first sign-in: a root of the invite tree, no invitation needed. */
+/** A founding moderator's first sign-in: a root of the invite tree, no invitation needed. */
 export function createModerator(db: Db, identity: GitHubIdentity, now: number): CreateResult {
   return db.transaction((): CreateResult => {
     if (loginTaken(db, identity.login)) return { ok: false, reason: 'login-taken' }

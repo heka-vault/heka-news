@@ -23,6 +23,8 @@ export type ModAction =
   | 'revoke_invite'
   | 'create_tag'
   | 'dismiss_flags'
+  | 'promote_moderator'
+  | 'remove_moderator'
 
 export interface ModLogInput {
   moderatorId: number
@@ -220,7 +222,8 @@ export type BanResult = { ok: true } | { ok: false; reason: 'missing' | 'moderat
 
 /**
  * Ban a member: every session ends at once and their open invitations are revoked. Moderators
- * cannot be banned; take them out of MODERATORS first.
+ * cannot be banned: remove them as moderator first (a founding moderator has to leave MODERATORS
+ * before that).
  */
 export function banUser(
   db: Db,
@@ -283,6 +286,84 @@ export function unbanUser(
       createdAt: at,
     })
     return true
+  })()
+}
+
+export type ModeratorResult =
+  | { ok: true }
+  | { ok: false; reason: 'missing' | 'self' | 'banned' | 'founding' | 'already' }
+
+interface RoleRow {
+  login: string
+  is_moderator: number
+  banned: number
+}
+
+function roleRow(db: Db, userId: number): RoleRow | null {
+  return db
+    .query<RoleRow, [number]>('SELECT login, is_moderator, banned FROM users WHERE id = ?')
+    .get(userId)
+}
+
+/**
+ * Make a member a moderator. Not yourself, and not a banned member. Takes effect on their next
+ * request: sessions read is_moderator from the users row every time.
+ */
+export function promoteModerator(
+  db: Db,
+  userId: number,
+  moderatorId: number,
+  reason: string,
+  at = nowSeconds(),
+): ModeratorResult {
+  return db.transaction((): ModeratorResult => {
+    const user = roleRow(db, userId)
+    if (!user) return { ok: false, reason: 'missing' }
+    if (userId === moderatorId) return { ok: false, reason: 'self' }
+    if (user.banned === 1) return { ok: false, reason: 'banned' }
+    if (user.is_moderator === 1) return { ok: false, reason: 'already' }
+    db.query('UPDATE users SET is_moderator = 1 WHERE id = ?').run(userId)
+    logModeration(db, {
+      moderatorId,
+      action: 'promote_moderator',
+      subjectUserId: userId,
+      subject: user.login,
+      reason,
+      createdAt: at,
+    })
+    return { ok: true }
+  })()
+}
+
+/**
+ * Take a member's moderator status away. Not your own, and not a founding moderator's (`founding`
+ * is MODERATORS, lowercased): sign-in would give it back. Their sessions stay; their next request
+ * has no moderator rights.
+ */
+export function removeModerator(
+  db: Db,
+  userId: number,
+  moderatorId: number,
+  reason: string,
+  founding: readonly string[],
+  at = nowSeconds(),
+): ModeratorResult {
+  return db.transaction((): ModeratorResult => {
+    const user = roleRow(db, userId)
+    if (!user) return { ok: false, reason: 'missing' }
+    if (userId === moderatorId) return { ok: false, reason: 'self' }
+    if (user.is_moderator === 0) return { ok: false, reason: 'already' }
+    if (founding.includes(user.login.toLowerCase())) return { ok: false, reason: 'founding' }
+    db.query('UPDATE users SET is_moderator = 0 WHERE id = ?').run(userId)
+    logModeration(db, {
+      moderatorId,
+      action: 'remove_moderator',
+      subjectUserId: userId,
+      subject: user.login,
+      reason,
+      createdAt: at,
+    })
+    return { ok: true }
   })()
 }
 

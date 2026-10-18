@@ -1,3 +1,4 @@
+import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { seedDatabase } from '../scripts/seed-data.ts'
 import { commentTree, countTree } from '../src/db/comments.ts'
@@ -43,6 +44,40 @@ describe('migrations', () => {
     ]) {
       expect(tables).toContain(table)
     }
+  })
+})
+
+describe('migration 0003', () => {
+  test('rebuilds mod_log for the moderator actions and keeps every row, id and the index', () => {
+    const db = new Database(':memory:', { strict: true })
+    db.run('PRAGMA foreign_keys = ON')
+    migrate(db, { before: '0003' })
+    seedDatabase(db, NOW)
+    const insert = (action: string) =>
+      db
+        .query(
+          `INSERT INTO mod_log (moderator_id, action, subject, reason, created_at)
+           VALUES ((SELECT min(id) FROM users), ?, 'someone', 'Asked to help.', ?)`,
+        )
+        .run(action, NOW)
+    expect(() => insert('promote_moderator')).toThrow()
+    const rows = () => db.query('SELECT * FROM mod_log ORDER BY id').all()
+    const before = rows()
+    expect(before.length).toBeGreaterThan(0)
+
+    expect(migrate(db)).toEqual(['0003_moderator_roles'])
+    expect(rows()).toEqual(before)
+    const indexes = db
+      .query<{ name: string }, []>(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'mod_log'",
+      )
+      .all()
+      .map((row) => row.name)
+    expect(indexes).toContain('mod_log_created')
+    insert('promote_moderator')
+    insert('remove_moderator')
+    expect(() => insert('crown_king')).toThrow()
+    expect(db.query('PRAGMA foreign_key_check').all()).toEqual([])
   })
 })
 
