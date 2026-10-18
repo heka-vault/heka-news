@@ -5,6 +5,10 @@
 // The stylesheet is inlined into every page (about 7 KB compressed) rather than linked: on a slow
 // phone connection a linked stylesheet is one more round trip before anything paints, and that
 // cost Lighthouse points on every page. Fonts are separate, immutable files.
+//
+// Scripts are TypeScript modules in src/client/, one per feature, transpiled here with Bun's
+// transpiler and served as /js/<name>.<hash>.js (immutable). They import nothing; each enhances
+// markup that already works without it (ADR 0001, CLAUDE.md).
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
@@ -28,6 +32,10 @@ const FONTS: Record<string, string[]> = {
 /** Faces every page needs at first paint; preloaded from the <head>. */
 const PRELOAD = ['archivo-latin-wdth-normal.woff2', 'source-serif-4-latin-wght-normal.woff2']
 
+/** The client modules in src/client/, by file name without .ts. */
+export const SCRIPTS = ['time', 'vote', 'forms', 'reply', 'copy'] as const
+export type ScriptName = (typeof SCRIPTS)[number]
+
 export interface Assets {
   /** The whole stylesheet, minified, for a <style> element. */
   css: string
@@ -37,6 +45,10 @@ export interface Assets {
   preloads: string[]
   /** public/ files by URL path. */
   publicFiles: Map<string, string>
+  /** Transpiled client modules by URL path. */
+  scripts: Map<string, string>
+  /** The fingerprinted URL of a client module. */
+  scriptUrl: (name: ScriptName) => string
 }
 
 /** Comments out, whitespace collapsed. Enough for hand-written CSS with no strings that matter. */
@@ -81,5 +93,18 @@ export function buildAssets(): Assets {
   const publicFiles = new Map<string, string>()
   for (const name of readdirSync(publicDir)) publicFiles.set(`/${name}`, join(publicDir, name))
 
-  return { css, fonts, preloads, publicFiles }
+  const transpiler = new Bun.Transpiler({ loader: 'ts', target: 'browser' })
+  const scripts = new Map<string, string>()
+  const scriptUrls = new Map<ScriptName, string>()
+  for (const name of SCRIPTS) {
+    const source = readFileSync(join(SRC, 'client', `${name}.ts`), 'utf8')
+    const js = transpiler.transformSync(source)
+    const hash = Bun.hash(js).toString(36).slice(0, 10)
+    const path = `/js/${name}.${hash}.js`
+    scripts.set(path, js)
+    scriptUrls.set(name, path)
+  }
+  const scriptUrl = (name: ScriptName) => scriptUrls.get(name) ?? `/js/${name}.js`
+
+  return { css, fonts, preloads, publicFiles, scripts, scriptUrl }
 }

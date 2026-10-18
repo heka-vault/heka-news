@@ -16,6 +16,8 @@ const ACTIONS: Record<string, string> = {
   ban_user: 'Banned a member',
   unban_user: 'Lifted a ban',
   revoke_invite: 'Revoked an invitation',
+  create_tag: 'Added a tag',
+  dismiss_flags: 'Kept after flags',
 }
 
 function Subject({ entry }: { entry: ModLogEntry }) {
@@ -29,7 +31,10 @@ function Subject({ entry }: { entry: ModLogEntry }) {
       </a>
     )
   }
-  if (entry.subjectUser) return <a href={`/u/${entry.subjectUser}`}>{entry.subjectUser}</a>
+  if (entry.action === 'create_tag') return <a href={`/t/${entry.subject}`}>{entry.subject}</a>
+  if (entry.subjectUser && entry.action !== 'revoke_invite') {
+    return <a href={`/u/${entry.subjectUser}`}>{entry.subjectUser}</a>
+  }
   return <span dir="auto">{entry.subject}</span>
 }
 

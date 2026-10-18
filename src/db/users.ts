@@ -1,13 +1,14 @@
 // Reading members: profiles and the invite tree. All user SQL for reads lives here.
 
 import type { Db } from './index.ts'
-import type { TreeNode, UserProfile, UserRef } from './types.ts'
+import type { Member, TreeNode, UserProfile, UserRef } from './types.ts'
 
 interface UserRow {
   id: number
   login: string
   display_name: string | null
   bio: string
+  bio_html: string
   created_at: number
   is_moderator: number
   banned: number
@@ -18,7 +19,7 @@ interface UserRow {
 export function getProfile(db: Db, login: string): UserProfile | null {
   const row = db
     .query<UserRow, [string]>(
-      `SELECT id, login, display_name, bio, created_at, is_moderator, banned, invited_by
+      `SELECT id, login, display_name, bio, bio_html, created_at, is_moderator, banned, invited_by
        FROM users WHERE login = ?`,
     )
     .get(login)
@@ -53,6 +54,7 @@ export function getProfile(db: Db, login: string): UserProfile | null {
     login: row.login,
     displayName: row.display_name,
     bio: row.bio,
+    bioHtml: row.bio_html,
     createdAt: row.created_at,
     isModerator: row.is_moderator === 1,
     banned: row.banned === 1,
@@ -67,7 +69,7 @@ export function getProfile(db: Db, login: string): UserProfile | null {
 export function inviteTree(db: Db): TreeNode[] {
   const rows = db
     .query<UserRow, []>(
-      `SELECT id, login, display_name, bio, created_at, is_moderator, banned, invited_by
+      `SELECT id, login, display_name, bio, bio_html, created_at, is_moderator, banned, invited_by
        FROM users ORDER BY created_at, id`,
     )
     .all()
@@ -106,4 +108,69 @@ export function listUsersForSitemap(db: Db): { login: string; createdAt: number 
 /** Number of members. */
 export function countUsers(db: Db): number {
   return db.query<{ n: number }, []>('SELECT count(*) AS n FROM users').get()?.n ?? 0
+}
+
+/** A member account by GitHub id, banned or not. */
+export function accountByGithubId(
+  db: Db,
+  githubId: number,
+): { id: number; login: string; banned: boolean } | null {
+  const row = db
+    .query<{ id: number; login: string; banned: number }, [number]>(
+      'SELECT id, login, banned FROM users WHERE github_id = ?',
+    )
+    .get(githubId)
+  return row ? { id: row.id, login: row.login, banned: row.banned === 1 } : null
+}
+
+/** A member by login (case-insensitive), banned or not, with their GitHub id. */
+export function accountByLogin(
+  db: Db,
+  login: string,
+): (Member & { githubId: number | null; banned: boolean }) | null {
+  const row = db
+    .query<
+      {
+        id: number
+        login: string
+        display_name: string | null
+        is_moderator: number
+        github_id: number | null
+        banned: number
+      },
+      [string]
+    >('SELECT id, login, display_name, is_moderator, github_id, banned FROM users WHERE login = ?')
+    .get(login)
+  if (!row) return null
+  return {
+    id: row.id,
+    login: row.login,
+    displayName: row.display_name,
+    isModerator: row.is_moderator === 1,
+    githubId: row.github_id,
+    banned: row.banned === 1,
+  }
+}
+
+/** What /settings edits. */
+export function profileSettings(
+  db: Db,
+  userId: number,
+): { displayName: string | null; bio: string } | null {
+  const row = db
+    .query<{ display_name: string | null; bio: string }, [number]>(
+      'SELECT display_name, bio FROM users WHERE id = ?',
+    )
+    .get(userId)
+  return row ? { displayName: row.display_name, bio: row.bio } : null
+}
+
+/** Members who could sign in through /dev/sign-in-as, for the development sign-in page. */
+export function listDevAccounts(db: Db): { login: string; isModerator: boolean }[] {
+  return db
+    .query<{ login: string; is_moderator: number }, []>(
+      'SELECT login, is_moderator FROM users WHERE banned = 0 ORDER BY is_moderator DESC, created_at',
+    )
+    .all()
+    .map((row) => ({ login: row.login, isModerator: row.is_moderator === 1 }))
 }

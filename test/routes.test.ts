@@ -106,10 +106,10 @@ describe('scripts stay same-origin and out of the markup', () => {
 
   test('voting while signed out explains sign-in instead of failing', async () => {
     const html = await (await get('/')).text()
-    expect(html).toContain(`href="/signin?next=%2Fitem%2F`)
+    expect(html).toContain(`href="/signin?next=%2F%23i`)
     const signin = await (await get('/signin?next=//evil.example.com')).text()
     expect(signin).toContain('Membership is by invitation; sign-in opens soon.')
-    expect(signin).toContain('<a href="/">Back to where you were</a>')
+    expect(signin).toContain('<a href="/">Back to the top items</a>')
   })
 })
 

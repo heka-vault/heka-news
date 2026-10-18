@@ -29,7 +29,7 @@ function comment(origin: string, itemUrl: string, node: CommentNode): Json | nul
     '@type': 'Comment',
     url: `${itemUrl}#c${node.id}`,
     ...(node.deleted
-      ? { text: 'Removed by a moderator' }
+      ? { text: node.removedBy === 'author' ? '[deleted]' : 'Removed by a moderator' }
       : { author: person(origin, node.author.login), text: htmlToText(node.bodyHtml) }),
     datePublished: isoTime(node.createdAt),
     interactionStatistic: [counter('LikeAction', node.points)],
@@ -93,7 +93,7 @@ export function profileJsonLd(origin: string, user: UserProfile): Json {
       alternateName: user.login,
       identifier: user.login,
       url: `${origin}/u/${user.login}`,
-      ...(user.bio ? { description: user.bio } : {}),
+      ...(user.bioHtml ? { description: htmlToText(user.bioHtml) } : {}),
       interactionStatistic: [
         {
           '@type': 'InteractionCounter',

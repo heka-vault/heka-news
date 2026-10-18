@@ -10,16 +10,8 @@
 // with live replies, a member with nothing posted, and a banned member.
 
 import type { Db } from '../src/db/index.ts'
-import {
-  banUser,
-  createComment,
-  createItem,
-  createTag,
-  createUser,
-  deleteComment,
-  deleteItem,
-  logModeration,
-} from '../src/db/write.ts'
+import { banUser, deleteComment, deleteItem, logModeration } from '../src/db/moderation.ts'
+import { createComment, createItem, createTag, createUser } from '../src/db/write.ts'
 
 const H = 3600
 const D = 86400

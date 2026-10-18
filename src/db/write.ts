@@ -1,6 +1,7 @@
-// Writing: the functions the seed script uses today and the phase 3 routes will use. Each keeps
+// Writing members, tags, items and comments: what the routes and the seed use. Each function keeps
 // the denormalized counters and the rendered HTML in step with the row it writes, in one
-// transaction. Rules that a trigger could enforce live here instead (ADR 0002).
+// transaction. Rules that a trigger could enforce live here instead (ADR 0002). Moderator actions
+// are in moderation.ts, votes in votes.ts, flags in flags.ts.
 
 import { domainOf } from '../lib/format.ts'
 import { MARKDOWN_VERSION, renderMarkdown } from '../lib/markdown.ts'
@@ -22,19 +23,23 @@ export interface NewUser {
 }
 
 export function createUser(db: Db, user: NewUser): number {
+  const bio = user.bio ?? ''
   const row = db
     .query<
       { id: number },
-      [number | null, string, string | null, string, number | null, number, number]
+      [number | null, string, string | null, string, string, number, number | null, number, number]
     >(
-      `INSERT INTO users (github_id, login, display_name, bio, invited_by, is_moderator, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO users (github_id, login, display_name, bio, bio_html, bio_html_v, invited_by,
+                          is_moderator, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .get(
       user.githubId ?? null,
       user.login,
       user.displayName ?? null,
-      user.bio ?? '',
+      bio,
+      bio ? renderMarkdown(bio, 'comment') : '',
+      MARKDOWN_VERSION,
       user.invitedBy ?? null,
       user.isModerator ? 1 : 0,
       user.createdAt ?? nowSeconds(),
@@ -116,15 +121,75 @@ export function createItem(db: Db, item: NewItem): number {
         item.points ?? 1,
       )
     if (!row) throw new Error('could not create item')
-    const tagId = db.query<{ id: number }, [string]>('SELECT id FROM tags WHERE name = ?')
-    const link = db.query('INSERT INTO item_tags (item_id, tag_id) VALUES (?, ?)')
-    for (const name of tags) {
-      const tag = tagId.get(name)
-      if (!tag) throw new Error(`unknown tag ${name}`)
-      link.run(row.id, tag.id)
-    }
+    setItemTags(db, row.id, tags)
     return row.id
   })()
+}
+
+/** Replace an item's tags (1 to MAX_TAGS known tags). Call inside a transaction. */
+export function setItemTags(db: Db, itemId: number, names: string[]): void {
+  const tags = [...new Set(names)]
+  if (tags.length < 1 || tags.length > MAX_TAGS) {
+    throw new Error(`an item needs 1 to ${MAX_TAGS} tags, got ${tags.length}`)
+  }
+  const tagId = db.query<{ id: number }, [string]>('SELECT id FROM tags WHERE name = ?')
+  const ids = tags.map((name) => {
+    const tag = tagId.get(name)
+    if (!tag) throw new Error(`unknown tag ${name}`)
+    return tag.id
+  })
+  db.query('DELETE FROM item_tags WHERE item_id = ?').run(itemId)
+  const link = db.query('INSERT INTO item_tags (item_id, tag_id) VALUES (?, ?)')
+  for (const id of ids) link.run(itemId, id)
+}
+
+export interface ItemEdit {
+  /** Ignored for status notes. */
+  title: string | null
+  bodyMd: string
+  tags: string[]
+}
+
+/** An author's edit: title, text and tags. The URL of a link never changes. */
+export function updateItem(db: Db, itemId: number, edit: ItemEdit, at = nowSeconds()): void {
+  db.transaction(() => {
+    const item = db
+      .query<{ kind: ItemKind }, [number]>('SELECT kind FROM items WHERE id = ?')
+      .get(itemId)
+    if (!item) throw new Error(`no item ${itemId}`)
+    const html = edit.bodyMd
+      ? renderMarkdown(edit.bodyMd, item.kind === 'post' ? 'post' : 'comment')
+      : ''
+    db.query(
+      `UPDATE items SET title = ?, body_md = ?, body_html = ?, body_html_v = ?, edited_at = ?
+       WHERE id = ?`,
+    ).run(
+      item.kind === 'status' ? null : edit.title,
+      edit.bodyMd,
+      html,
+      MARKDOWN_VERSION,
+      at,
+      itemId,
+    )
+    setItemTags(db, itemId, edit.tags)
+  })()
+}
+
+/** The author deletes their own item. The row stays; its page says the author deleted it. */
+export function authorDeleteItem(
+  db: Db,
+  itemId: number,
+  authorId: number,
+  at = nowSeconds(),
+): boolean {
+  return (
+    db
+      .query(
+        `UPDATE items SET deleted = 1, deleted_at = ?, deleted_by = ?
+         WHERE id = ? AND author_id = ? AND deleted = 0`,
+      )
+      .run(at, authorId, itemId, authorId).changes === 1
+  )
 }
 
 export interface NewComment {
@@ -181,137 +246,52 @@ export function createComment(db: Db, comment: NewComment): number {
   })()
 }
 
-export type ModAction =
-  | 'delete_item'
-  | 'restore_item'
-  | 'edit_item'
-  | 'retag_item'
-  | 'delete_comment'
-  | 'restore_comment'
-  | 'ban_user'
-  | 'unban_user'
-  | 'revoke_invite'
-
-export interface ModLogInput {
-  moderatorId: number
-  action: ModAction
-  reason: string
-  subject?: string
-  itemId?: number | null
-  commentId?: number | null
-  subjectUserId?: number | null
-  createdAt?: number
+/** An author's edit of their comment. */
+export function updateComment(db: Db, commentId: number, bodyMd: string, at = nowSeconds()): void {
+  db.query(
+    'UPDATE comments SET body_md = ?, body_html = ?, body_html_v = ?, edited_at = ? WHERE id = ?',
+  ).run(bodyMd, renderMarkdown(bodyMd, 'comment'), MARKDOWN_VERSION, at, commentId)
 }
 
-export function logModeration(db: Db, entry: ModLogInput): number {
-  const row = db
-    .query<
-      { id: number },
-      [number, string, number | null, number | null, number | null, string, string, number]
-    >(
-      `INSERT INTO mod_log (moderator_id, action, item_id, comment_id, subject_user_id, subject,
-                            reason, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-    )
-    .get(
-      entry.moderatorId,
-      entry.action,
-      entry.itemId ?? null,
-      entry.commentId ?? null,
-      entry.subjectUserId ?? null,
-      entry.subject ?? '',
-      entry.reason,
-      entry.createdAt ?? nowSeconds(),
-    )
-  if (!row) throw new Error('could not write the moderation log')
-  return row.id
-}
-
-/** Remove an item as a moderator, with a log entry. The row stays; pages show it as removed. */
-export function deleteItem(
-  db: Db,
-  itemId: number,
-  moderatorId: number,
-  reason: string,
-  at = nowSeconds(),
-): void {
-  db.transaction(() => {
-    const item = db
-      .query<{ title: string | null; body_md: string; author_id: number }, [number]>(
-        'SELECT title, body_md, author_id FROM items WHERE id = ?',
-      )
-      .get(itemId)
-    if (!item) throw new Error(`no item ${itemId}`)
-    db.query('UPDATE items SET deleted = 1, deleted_at = ? WHERE id = ?').run(at, itemId)
-    logModeration(db, {
-      moderatorId,
-      action: 'delete_item',
-      itemId,
-      subjectUserId: item.author_id,
-      subject: item.title ?? item.body_md.slice(0, 80),
-      reason,
-      createdAt: at,
-    })
-  })()
-}
-
-/** Remove a comment as a moderator, with a log entry. Its replies stay. */
-export function deleteComment(
+/** The author deletes their comment. Replies keep their place under "[deleted]". */
+export function authorDeleteComment(
   db: Db,
   commentId: number,
-  moderatorId: number,
-  reason: string,
+  authorId: number,
   at = nowSeconds(),
-): void {
-  db.transaction(() => {
+): boolean {
+  return db.transaction(() => {
     const comment = db
-      .query<{ item_id: number; author_id: number }, [number]>(
-        'SELECT item_id, author_id FROM comments WHERE id = ? AND deleted = 0',
+      .query<{ item_id: number }, [number, number]>(
+        'SELECT item_id FROM comments WHERE id = ? AND author_id = ? AND deleted = 0',
       )
-      .get(commentId)
-    if (!comment) throw new Error(`no live comment ${commentId}`)
-    db.query('UPDATE comments SET deleted = 1, deleted_at = ? WHERE id = ?').run(at, commentId)
-    db.query('UPDATE items SET comment_count = comment_count - 1 WHERE id = ?').run(comment.item_id)
-    logModeration(db, {
-      moderatorId,
-      action: 'delete_comment',
-      itemId: comment.item_id,
+      .get(commentId, authorId)
+    if (!comment) return false
+    db.query('UPDATE comments SET deleted = 1, deleted_at = ?, deleted_by = ? WHERE id = ?').run(
+      at,
+      authorId,
       commentId,
-      subjectUserId: comment.author_id,
-      subject: `A comment on item ${comment.item_id}`,
-      reason,
-      createdAt: at,
-    })
+    )
+    db.query('UPDATE items SET comment_count = comment_count - 1 WHERE id = ?').run(comment.item_id)
+    return true
   })()
 }
 
-/** Ban a member as a moderator, with a log entry. */
-export function banUser(
+/** /settings: display name (null clears it) and bio (markdown). */
+export function updateProfile(
   db: Db,
   userId: number,
-  moderatorId: number,
-  reason: string,
-  at = nowSeconds(),
+  profile: { displayName: string | null; bio: string },
 ): void {
-  db.transaction(() => {
-    const user = db
-      .query<{ login: string }, [number]>('SELECT login FROM users WHERE id = ?')
-      .get(userId)
-    if (!user) throw new Error(`no user ${userId}`)
-    db.query('UPDATE users SET banned = 1, banned_at = ?, banned_reason = ? WHERE id = ?').run(
-      at,
-      reason,
-      userId,
-    )
-    logModeration(db, {
-      moderatorId,
-      action: 'ban_user',
-      subjectUserId: userId,
-      subject: user.login,
-      reason,
-      createdAt: at,
-    })
-  })()
+  db.query(
+    'UPDATE users SET display_name = ?, bio = ?, bio_html = ?, bio_html_v = ? WHERE id = ?',
+  ).run(
+    profile.displayName,
+    profile.bio,
+    profile.bio ? renderMarkdown(profile.bio, 'comment') : '',
+    MARKDOWN_VERSION,
+    userId,
+  )
 }
 
 /** Re-render body_html for rows rendered by an older MARKDOWN_VERSION. Returns rows updated. */
@@ -339,7 +319,16 @@ export function rerenderStale(db: Db): number {
     for (const comment of comments) {
       setComment.run(renderMarkdown(comment.body_md, 'comment'), MARKDOWN_VERSION, comment.id)
     }
-    updated = items.length + comments.length
+    const users = db
+      .query<{ id: number; bio: string }, [number]>(
+        'SELECT id, bio FROM users WHERE bio_html_v < ?',
+      )
+      .all(MARKDOWN_VERSION)
+    const setBio = db.query('UPDATE users SET bio_html = ?, bio_html_v = ? WHERE id = ?')
+    for (const user of users) {
+      setBio.run(user.bio ? renderMarkdown(user.bio, 'comment') : '', MARKDOWN_VERSION, user.id)
+    }
+    updated = items.length + comments.length + users.length
   })()
   return updated
 }

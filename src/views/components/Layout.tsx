@@ -4,6 +4,7 @@
 import { raw } from 'hono/html'
 import type { Child } from 'hono/jsx'
 import { SITE } from '../../config.ts'
+import type { ScriptName } from '../../lib/assets.ts'
 import { absoluteUrl, type NavKey, type PageContext } from '../context.ts'
 import { Mark } from './Mark.tsx'
 
@@ -25,15 +26,22 @@ export interface LayoutProps {
   jsonLd?: object[]
   /** Extra feeds for this page (a tag's feed). */
   feeds?: { title: string; href: string }[]
+  /** Same-origin modules this page needs, by name (src/client/). Relative times load everywhere. */
+  scripts?: ScriptName[]
   children?: Child
 }
 
-const NAV: { key: Exclude<NavKey, null>; href: string; label: string }[] = [
+type NavEntry = { key: Exclude<NavKey, null>; href: string; label: string }
+
+const NAV: NavEntry[] = [
   { key: 'top', href: '/', label: 'Top' },
   { key: 'new', href: '/newest', label: 'New' },
   { key: 'posts', href: '/posts', label: 'Posts' },
   { key: 'status', href: '/status', label: 'Status' },
 ]
+
+const MEMBER_NAV: NavEntry = { key: 'replies', href: '/replies', label: 'Replies' }
+const MOD_NAV: NavEntry = { key: 'mod', href: '/mod', label: 'Mod' }
 
 /** JSON in a <script>: "<" escaped so a title cannot close the element. */
 export function jsonLdScript(data: object) {
@@ -48,6 +56,16 @@ export function Layout(props: LayoutProps) {
   const canonical = absoluteUrl(ctx, props.canonical ?? ctx.path)
   const image = absoluteUrl(ctx, '/og.png')
   const signinHref = `/signin?next=${encodeURIComponent(ctx.returnTo)}`
+  const viewer = ctx.viewer
+  const nav = [...NAV, ...(viewer ? [MEMBER_NAV] : []), ...(viewer?.isModerator ? [MOD_NAV] : [])]
+  // Relative times everywhere; votes wherever a member is signed in; then what the page asks for.
+  const scripts = [
+    ...new Set<ScriptName>([
+      'time',
+      ...(viewer ? (['vote'] as const) : []),
+      ...(props.scripts ?? []),
+    ]),
+  ]
 
   return (
     <html lang="en" dir="ltr">
@@ -61,6 +79,7 @@ export function Layout(props: LayoutProps) {
         <meta name="theme-color" content="#1f4235" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1b3a2f" media="(prefers-color-scheme: dark)" />
         <meta name="color-scheme" content="light dark" />
+        {viewer && <meta name="csrf-token" content={viewer.csrf} />}
         {ctx.assets.preloads.map((href) => (
           <link rel="preload" href={href} as="font" type="font/woff2" crossorigin="anonymous" />
         ))}
@@ -98,6 +117,9 @@ export function Layout(props: LayoutProps) {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={image} />
         {props.jsonLd?.map((data) => jsonLdScript(data))}
+        {scripts.map((name) => (
+          <script type="module" src={ctx.assets.scriptUrl(name)} />
+        ))}
       </head>
       <body>
         <a class="skip-link" href="#main">
@@ -111,7 +133,7 @@ export function Layout(props: LayoutProps) {
             </a>
             <nav class="bar__nav" aria-label="Lists">
               <ul>
-                {NAV.map((item) => (
+                {nav.map((item) => (
                   <li>
                     <a href={item.href} aria-current={props.nav === item.key ? 'page' : undefined}>
                       {item.label}
@@ -120,9 +142,24 @@ export function Layout(props: LayoutProps) {
                 ))}
               </ul>
             </nav>
-            <a class="bar__signin" href={signinHref} rel="nofollow">
-              Sign in
-            </a>
+            {viewer ? (
+              <div class="bar__member">
+                <a
+                  class="bar__signin"
+                  href="/submit"
+                  aria-current={props.nav === null && ctx.path === '/submit' ? 'page' : undefined}
+                >
+                  Submit
+                </a>
+                <a class="bar__me" href={`/u/${viewer.login}`} translate="no" title={viewer.login}>
+                  {viewer.login}
+                </a>
+              </div>
+            ) : (
+              <a class="bar__signin" href={signinHref} rel="nofollow">
+                Sign in
+              </a>
+            )}
           </div>
         </header>
         <main id="main" tabindex={-1}>
