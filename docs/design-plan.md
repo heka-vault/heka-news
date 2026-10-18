@@ -171,8 +171,83 @@ Title Case), "we" in the about page (brand voice), `theme-color` set to the bar'
 than the page background (it is the color at the top of the page), and `main:focus` without an
 outline (the skip link's target, not a control).
 
-### Screenshots
+### Screenshots (phase 2)
 
 Three rounds against seed data, light and dark, 1280px and 390px. Round 1 found 3, 4 and the
 heavy underlines on the invite tree; round 2 checked the fixes, the empty states and the gap
 between the comment band and the footer.
+
+
+## Members' screens (phase 3, 2026-10-18)
+
+Written before the CSS for sign-in, posting and moderation, then checked against the
+frontend-design defaults like the rest of this plan. The reading pages do not change; these screens
+are where a member *does* something, and they borrow the floor's one idea: a person's mark. The
+tally mark stays the vote; a form is the work order a member fills in; a preview is a proof.
+
+### What is new on the page
+
+| Screen | Job | Layout |
+|---|---|---|
+| Bar, signed in | Get to posting and to your own page | "Submit" in the outlined slot "Sign in" used; your login beside it, cut with an ellipsis on phones (a 39-character login must not push the bar to three rows); "Replies" and, for moderators, "Mod" join the lists |
+| `/submit` | Pick a kind, fill it in | Three kind tabs as links (`?kind=post`), each a labelled slot with a one-line hint on wide screens and the label only on phones; then the form for that kind in one column at the post measure |
+| Comment form | Say something under an item | At the top of the raised band, a serif textarea on the floor colour so it reads as paper on the band; "Post comment" and "Preview" |
+| Reply in place | Answer one comment without losing your place | The same form, opened under the comment's actions on the thread's guide line; Escape or Cancel closes an empty one and returns focus to "reply" |
+| `/invite/:code` | Explain the site to someone who has never seen it, then let them in | A heading naming who invited them, a lede, the one solid button ("Sign in with GitHub"), and the expiry date. A used, expired or withdrawn link says which and what to do |
+| `/settings` | Name, bio, invitations, sign out | One column of sections; a new invitation link appears once at the top in a stamped callout with a read-only field and "Copy link" |
+| `/mod` | Act on flags, undo removals, revoke invitations, add tags | Sections in order of urgency; each flagged entry is the normal item row, a line of flag counts, and one reason field with two buttons (Remove, Keep) |
+| Confirm pages | Delete your work, or act as a moderator | The thing quoted, one sentence on what happens, a reason field when the log will publish it, the button and Cancel |
+
+### Form rules
+
+- Labels above fields, in Archivo 600 at `--text-ui`. Hints under the label in muted caption, so a
+  screen reader hears label, hint, then the field (`aria-describedby`).
+- Inputs on `--bg-raised` (on the floor) or `--bg` (on the raised band), a 1.5px `--ink-muted`
+  border, `--radius-control`, at least 16px text so phones do not zoom. Focus is the site's violet
+  ring, nothing else.
+- What a member writes is typed in the face it will be read in: serif textareas for bodies,
+  comments and bios; Archivo for titles and addresses.
+- Character limits come from the schema. A caption under the field says the limit; with JavaScript
+  it counts down ("312 characters left") and turns stop-red when over.
+- Errors: a summary at the top linking to each field, a message under the field, the field marked
+  `aria-invalid`, and focus on the first one. What was typed is always kept.
+- Buttons say what happens: "Post link", "Publish post", "Post note", "Post reply", "Save
+  changes", "Make an invitation link", "Remove item". The sending state says it too ("Posting…").
+
+### Color additions
+
+| Name | Light | Dark | Role |
+|---|---|---|---|
+| Stop red | `#a3261c` | `#ff9d8a` | The red of a machine's emergency stop: error text, an over-limit count, and the outline of a button that removes or deletes. Never a fill behind text, never decoration. 6.4:1 on the floor in light, 8.9:1 in dark |
+
+Everything else reuses the palette. Checked tags and the chosen kind tab take the violet stamp,
+because choosing is a person's mark; the preview is outlined dashed, the idiom this site already
+uses for something not live (the banned role).
+
+### Motion (animate, then review-animations)
+
+| Element | Gate | Purpose | Decision |
+|---|---|---|---|
+| Vote, pressed state | tens of times a session | feedback | No new motion. The existing press (scale 0.95, 120ms `--ease-out`) and the fill, which now stays when the vote is in; the fill transition is the same 120ms. The count changes without animation: it is data |
+| Reply form opening in place | occasional | spatial consistency: it belongs to that comment | `@starting-style` from opacity 0 and 4px up, 200ms `--ease-out` (`--duration-fold`); opacity only under reduced motion |
+| A reply just posted | occasional | state indication: here is yours | No motion. It takes the `:target` tint a permalinked comment gets, and focus moves to its author link |
+| Preview appearing | occasional | none that motion serves | No animation: the panel appears where it was reserved under the field |
+| Kind tabs, tag checkboxes, choices | tens of times | feedback | Colour and border only, `--duration` `ease`; press scale 0.97 on the tabs, which are links to another page |
+| Form being sent | once per form | state indication | Text change on the button ("Posting…"), no spinner |
+
+### Review against the defaults
+
+1. **The SaaS-card form** (default 4): every field in a rounded white card with a soft shadow.
+   Not used: fields sit on the page with labels above, no cards, no shadows. The only boxes are
+   the preview (dashed, because it is a proof) and the new-invitation callout.
+2. **Pill toggle for the kind of item.** The generic answer is a segmented control with a sliding
+   thumb. Revised: three links with the kind's name and what it is for, because the choice
+   changes the form's fields and deserves its own URL; the chosen one is stamped violet.
+3. **Tag chips with an ×.** Revised: the tags look exactly like the tags on an item (paper labels,
+   1px corners), so picking one previews how it will show.
+4. **A red banner across the page for errors.** Revised: a quiet summary with a stop-red rule and
+   links to the fields, and the message where the problem is.
+5. **A modal for "Are you sure?"** Revised: a page. It works without JavaScript, it can be linked,
+   and a moderator's reason field needs room.
+6. **Toasts for "Saved".** Not used: the page you land on shows the result (the item, the comment
+   in its thread, "Saved." above the profile form).
