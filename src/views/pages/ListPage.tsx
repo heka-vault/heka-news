@@ -26,6 +26,8 @@ export interface ListPageProps {
   empty: { title: string; body: Child }
   jsonLd?: object[]
   feeds?: { title: string; href: string }[]
+  /** A panel beside the list on wide screens and after it on phones (the front page's "Who's here"). */
+  aside?: Child
 }
 
 export function ListPage(props: ListPageProps) {
@@ -39,22 +41,25 @@ export function ListPage(props: ListPageProps) {
       jsonLd={props.jsonLd}
       feeds={props.feeds}
     >
-      <div class="wrap list-page">
+      <div class={props.aside ? 'wrap list-page list-page--aside' : 'wrap list-page'}>
         <header class={props.headingHidden ? 'sr-only' : 'page-head'}>
           <h1>{props.heading}</h1>
           {props.intro}
         </header>
-        {props.items.length > 0 ? (
-          <ItemList
-            items={props.items}
-            ctx={props.ctx}
-            rankFrom={props.rankFrom}
-            fullNotes={props.fullNotes}
-          />
-        ) : (
-          <Empty title={props.empty.title}>{props.empty.body}</Empty>
-        )}
-        <Pager prev={props.prev} next={props.next} />
+        <div class="list-page__main">
+          {props.items.length > 0 ? (
+            <ItemList
+              items={props.items}
+              ctx={props.ctx}
+              rankFrom={props.rankFrom}
+              fullNotes={props.fullNotes}
+            />
+          ) : (
+            <Empty title={props.empty.title}>{props.empty.body}</Empty>
+          )}
+          <Pager prev={props.prev} next={props.next} />
+        </div>
+        {props.aside}
       </div>
     </Layout>
   )

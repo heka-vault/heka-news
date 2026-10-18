@@ -395,3 +395,27 @@ public and cacheable for anonymous readers; nothing in the panel depends on who 
 6. **A strip of avatars ("and 20 others").** Not used: it shows faces, not the tree, and the tree
    is the interesting part.
 7. **A fade-in on load.** Not used: no motion runs on load.
+
+### Reviews while building (the invite tree, up front)
+
+Screenshots against the seed and three extra databases (no members; one founding member and no
+items; the seed plus six members invited by one long login in one morning and an eight-member chain
+under `bollard`), at 320, 390 and 1280px, light and dark; the bar measured at 320 to 1280px for
+each role.
+
+**Worst cases** (break-ui)
+
+| # | Severity | Field | Worst case | What happened | Fix |
+|---|---|---|---|---|---|
+| 1 | Ugly | join time in the 17rem column | `aleksandra-wisniewska-kowalczyk-ops` among short logins | The long login pushed "joined…" to its own line while the others kept it inline: two row shapes in one list | From 64rem every join time takes its own line; on phones it stays inline |
+| 2 | Ugly | empty site, 1280px | "Nothing has been posted yet" beside the panel | The empty state's top padding put its heading 32px below "Who's here" | No top padding on the empty state inside the two-column layout |
+| 3 | Ugly | empty site, phones | the panel after the empty state | 80px of floor between them (the state's padding plus the panel's margin) | The panel drops its margin after an empty list |
+| 4 | Fragile | banned member | `growth-hacker-9000` joined 12 days ago | Would be listed on the front page | Banned members are counted, never listed (`treeSummary`) |
+| — | Holds | many in one morning | six from one inviter | They group under one inviter; five shown, the sixth is on `/tree` | — |
+| — | Holds | deep chain | twelve people | The panel stays two levels deep; the sentence says "12 people long" | — |
+| — | Holds | counts | 0, 1 and 32 members | "No members yet.", "1 member so far.", "32 members so far." | `plural()` |
+| — | Holds | bar at 320px | member and moderator | The lists wrap to a second row with "Tree", no horizontal overflow; as before this change | — |
+
+Just above 40rem (641px; two rows again by 700px) the bar still takes three rows for a moderator
+(wordmark, then the lists, then "Submit" and the login). It did with "Tree" too; it is left for a
+later pass on the bar.

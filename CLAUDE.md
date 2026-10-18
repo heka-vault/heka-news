@@ -48,11 +48,11 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 | `src/lib/jsonld.ts`, `src/lib/feeds.ts` | Structured data; RSS, sitemap, robots.txt |
 | `src/lib/assets.ts` | Builds the inline stylesheet and the font routes at startup |
 | `src/lib/format.ts` | Numbers, plurals, relative times, domains |
-| `src/views/` | Hono JSX: `components/` (Layout, Items, Comments, Forms, Mark, Time) and `pages/` |
+| `src/views/` | Hono JSX: `components/` (Layout, Items, Comments, Forms, Mark, Time, WhosHere: the front page's newest branches of the invite tree) and `pages/` |
 | `src/styles/` | `tokens.css` (from hekafactory.com, plus additions), `base.css`, `app.css` |
 | `public/` | Favicon, touch icon, `og.png` (`sh scripts/render-assets.sh` re-renders it) |
 | `scripts/` | `seed.ts` and `seed-data.ts`, `smoke.ts`, `lighthouse.ts`, `serve-seeded.ts`, `screenshots.sh` |
-| `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes, auth (OAuth, sessions, CSRF, invites, dev sign-in), members (posting, edits, votes, flags, limits), moderation |
+| `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes, auth (OAuth, sessions, CSRF, invites, dev sign-in), members (posting, edits, votes, flags, limits), moderation, the invite tree in the bar and on the front page |
 | `Dockerfile`, `deploy/prod/compose.yaml`, `.woodpecker/` | The image, the production stack, CI and CD |
 
 ## Commands

@@ -27,7 +27,7 @@ import { listModLog } from './db/modlog.ts'
 import { getSession, touchSession } from './db/sessions.ts'
 import { getTag, listTags } from './db/tags.ts'
 import type { ItemKind, ItemSummary } from './db/types.ts'
-import { getProfile, inviteTree, listUsersForSitemap } from './db/users.ts'
+import { getProfile, inviteTree, listUsersForSitemap, treeSummary } from './db/users.ts'
 import { votedComments, votedItems } from './db/votes.ts'
 import { type Assets, buildAssets } from './lib/assets.ts'
 import { robotsTxt, rssFeed, sitemap } from './lib/feeds.ts'
@@ -48,6 +48,7 @@ import { registerMembers } from './routes/members.tsx'
 import { registerModeration } from './routes/moderation.tsx'
 import type { AppEnv, C, HtmlStatus, Web } from './routes/web.ts'
 import { Csrf } from './views/components/Forms.tsx'
+import { WHOS_HERE_LIMIT, WhosHere } from './views/components/WhosHere.tsx'
 import type { NavKey, PageContext, SigninMode } from './views/context.ts'
 import { ItemPage } from './views/pages/ItemPage.tsx'
 import { ListPage } from './views/pages/ListPage.tsx'
@@ -309,6 +310,9 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
         }
         empty={emptySite}
         jsonLd={page === 1 ? [websiteJsonLd(origin)] : undefined}
+        aside={
+          page === 1 ? <WhosHere ctx={ctx} summary={treeSummary(db, WHOS_HERE_LIMIT)} /> : undefined
+        }
       />,
     )
   })

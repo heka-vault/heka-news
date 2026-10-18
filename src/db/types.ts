@@ -159,6 +159,24 @@ export interface TreeNode {
   children: TreeNode[]
 }
 
+/** One of the newest members, for the front page's "Who's here". */
+export interface NewMember {
+  login: string
+  createdAt: number
+  /** Who invited them; null for a founding member. */
+  invitedBy: string | null
+}
+
+/** The invite tree in brief: its size, its deepest chain, and its newest branches. */
+export interface TreeSummary {
+  /** Every member, banned or not: the number /tree shows. */
+  members: number
+  /** Invitations between a founding member and the furthest member from one; 0 with none. */
+  deepest: number
+  /** Newest first. Banned members are left out. */
+  newest: NewMember[]
+}
+
 export interface Tag {
   name: string
   description: string

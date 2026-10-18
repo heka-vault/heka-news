@@ -999,6 +999,99 @@ main:has(> .discussion:last-child) {
   white-space: nowrap;
 }
 
+/* --- Who's here: the newest branches of the tree, on the front page ---------------------------
+ * Beside the list from 64rem, after it (and the pager) below that. No frame: the heading and space
+ * set it apart, and the branches use the tree's own guide lines. */
+
+.whos-here {
+  margin-top: var(--space-7);
+  font-family: var(--font-display);
+  font-size: var(--text-caption);
+  line-height: var(--leading-tight);
+}
+
+.whos-here h2 {
+  font-size: var(--text-lead);
+}
+
+.whos-here__lede,
+.whos-here__size {
+  margin: var(--space-2) 0 0;
+  max-width: 30rem;
+  color: var(--ink-muted);
+}
+
+.whos-here__lede a {
+  color: var(--ink);
+}
+
+.whos-here__tree {
+  margin-top: var(--space-4);
+}
+
+.whos-here__tree > li + li {
+  margin-top: var(--space-3);
+}
+
+.whos-here__tree li {
+  margin-top: 0;
+}
+
+.whos-here__tree .tree li + li {
+  margin-top: var(--space-1);
+}
+
+.whos-here__inviter,
+.whos-here__inviter a {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.whos-here__size {
+  margin-top: var(--space-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.whos-here__more {
+  margin: var(--space-3) 0 0;
+}
+
+.whos-here__more a {
+  display: inline-block;
+  padding-block: 0.1875rem;
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+
+/* On an empty site the panel follows the empty state's own padding, not a second gap. */
+.list-page__main:has(> .empty:only-child) + .whos-here {
+  margin-top: 0;
+}
+
+@media (width >= 64rem) {
+  .list-page--aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    column-gap: var(--space-7);
+    align-items: start;
+  }
+
+  .list-page--aside > .whos-here {
+    margin-top: 0;
+  }
+
+  /* The two columns start on one line: the empty state's heading level with "Who's here". */
+  .list-page--aside .list-page__main > .empty {
+    padding-top: 0;
+  }
+
+  /* In the narrow column every join time takes its own line, so a long login does not leave the
+     rows with two different shapes. */
+  .whos-here .tree__joined {
+    display: block;
+  }
+}
+
 /* --- The moderation log ----------------------------------------------------------------------- */
 
 .modlog {
