@@ -19,6 +19,8 @@ export interface ListPageProps {
   intro?: Child
   items: ItemSummary[]
   rankFrom?: number
+  /** Status notes in full (the status feed). */
+  fullNotes?: boolean
   prev?: { href: string; label: string }
   next?: { href: string; label: string }
   empty: { title: string; body: Child }
@@ -43,7 +45,12 @@ export function ListPage(props: ListPageProps) {
           {props.intro}
         </header>
         {props.items.length > 0 ? (
-          <ItemList items={props.items} ctx={props.ctx} rankFrom={props.rankFrom} />
+          <ItemList
+            items={props.items}
+            ctx={props.ctx}
+            rankFrom={props.rankFrom}
+            fullNotes={props.fullNotes}
+          />
         ) : (
           <Empty title={props.empty.title}>{props.empty.body}</Empty>
         )}

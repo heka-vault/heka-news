@@ -222,6 +222,7 @@ export function createApp(opts: AppOptions): Hono {
     title: string
     description: string
     intro?: Child
+    fullNotes?: boolean
     empty: { title: string; body: Child }
   }) =>
     app.get(opts.path, (c) => {
@@ -244,6 +245,7 @@ export function createApp(opts: AppOptions): Hono {
           nav={opts.nav}
           heading={title}
           intro={opts.intro}
+          fullNotes={opts.fullNotes}
           items={rows.slice(0, PAGE_SIZE)}
           prev={
             page > 1 ? { href: withPage(opts.path, page - 1), label: 'Newer items' } : undefined
@@ -286,6 +288,7 @@ export function createApp(opts: AppOptions): Hono {
     description:
       'Short status notes from heka news members: what they are building, reading or stuck on.',
     intro: <p>Short notes from members: what they are building, reading or stuck on.</p>,
+    fullNotes: true,
     empty: {
       title: 'No status notes yet.',
       body: <p>Short notes from members, up to 500 characters each, will appear here.</p>,

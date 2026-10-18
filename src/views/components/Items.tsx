@@ -58,10 +58,13 @@ export function ItemRow({
   item,
   ctx,
   rank,
+  fullNotes = false,
 }: {
   item: ItemSummary
   ctx: PageContext
   rank?: number
+  /** Show status notes whole (the status feed) instead of clamped to three lines. */
+  fullNotes?: boolean
 }) {
   const href = `/item/${item.id}`
   return (
@@ -70,7 +73,7 @@ export function ItemRow({
       <VoteMark ctx={ctx} target={href} label={itemLabel(item)} points={item.points} />
       <div class="item__main">
         {item.kind === 'status' ? (
-          <div class="note note--clamped" dir="auto">
+          <div class={fullNotes ? 'note' : 'note note--clamped'} dir="auto">
             {raw(item.bodyHtml ?? '')}
           </div>
         ) : (
@@ -111,14 +114,21 @@ export function ItemList({
   items,
   ctx,
   rankFrom,
+  fullNotes,
 }: {
   items: ItemSummary[]
   ctx: PageContext
   /** Show ranks starting at this number (the front page). */
   rankFrom?: number
+  fullNotes?: boolean
 }) {
   const rows = items.map((item, i) => (
-    <ItemRow item={item} ctx={ctx} rank={rankFrom === undefined ? undefined : rankFrom + i} />
+    <ItemRow
+      item={item}
+      ctx={ctx}
+      rank={rankFrom === undefined ? undefined : rankFrom + i}
+      fullNotes={fullNotes}
+    />
   ))
   return rankFrom === undefined ? (
     <ul class="items">{rows}</ul>

@@ -11,7 +11,7 @@ const checks: [path: string, status: number, marker: string][] = [
   ['/', 200, 'class="items items--ranked"'],
   ['/newest', 200, '<h1>Newest</h1>'],
   ['/posts', 200, '<h1>Posts</h1>'],
-  ['/status', 200, 'class="note note--clamped"'],
+  ['/status', 200, '<div class="note" dir="auto">'],
   [`/item/${server.postId}`, 200, 'DiscussionForumPosting'],
   [`/item/${server.statusId}`, 200, 'SocialMediaPosting'],
   ['/t/harness', 200, 'Tagged harness'],
