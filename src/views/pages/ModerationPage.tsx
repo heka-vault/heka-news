@@ -18,6 +18,8 @@ const ACTIONS: Record<string, string> = {
   revoke_invite: 'Revoked an invitation',
   create_tag: 'Added a tag',
   dismiss_flags: 'Kept after flags',
+  promote_moderator: 'Made a moderator',
+  remove_moderator: 'Removed a moderator',
 }
 
 function Subject({ entry }: { entry: ModLogEntry }) {

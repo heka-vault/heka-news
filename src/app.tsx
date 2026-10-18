@@ -4,7 +4,14 @@
 
 import { Hono } from 'hono'
 import type { Child } from 'hono/jsx'
-import { type Config, PAGE_SIZE, RULES, SESSION_COOKIE, SITE } from './config.ts'
+import {
+  type Config,
+  isFoundingModerator,
+  PAGE_SIZE,
+  RULES,
+  SESSION_COOKIE,
+  SITE,
+} from './config.ts'
 import { commentTree, listCommentsByAuthor } from './db/comments.ts'
 import type { Db } from './db/index.ts'
 import {
@@ -493,6 +500,7 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
       <UserPage
         ctx={ctxWithVotes(c, items)}
         user={user}
+        founding={user.isModerator && isFoundingModerator(config, user.login)}
         items={items}
         comments={page === 1 ? listCommentsByAuthor(db, user.id, { limit: 10, offset: 0 }) : []}
         page={page}

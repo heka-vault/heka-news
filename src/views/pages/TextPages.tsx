@@ -39,8 +39,8 @@ export function AboutPage({
           <p>
             <a href={SITE.parent.url}>heka</a> runs it. We are a group of engineers who build
             software factories: the guides, checks, access and infrastructure that coding agents
-            work in. Three of us moderate. Every moderator action is public, with its reason, in the{' '}
-            <a href="/moderation">moderation log</a>.
+            work in. Some of us moderate, with members we have asked to help. Every moderator action
+            is public, with its reason, in the <a href="/moderation">moderation log</a>.
           </p>
 
           <h2 id="membership">How membership works</h2>

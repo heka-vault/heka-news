@@ -21,8 +21,12 @@ export function openDb(path: string): Db {
   return db
 }
 
-/** Apply every migration in src/db/migrations that has not run yet, in file-name order. */
-export function migrate(db: Db): string[] {
+/**
+ * Apply every migration in src/db/migrations that has not run yet, in file-name order. `before`
+ * stops at the first version that sorts at or after it, so a test can write rows under an older
+ * schema and then apply the rest.
+ */
+export function migrate(db: Db, opts: { before?: string } = {}): string[] {
   db.run(
     'CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)',
   )
@@ -38,6 +42,7 @@ export function migrate(db: Db): string[] {
   const applied: string[] = []
   for (const file of files) {
     const version = file.replace(/\.sql$/, '')
+    if (opts.before !== undefined && version >= opts.before) break
     if (done.has(version)) continue
     const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
     db.transaction(() => {

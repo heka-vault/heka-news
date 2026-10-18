@@ -1,7 +1,7 @@
 // Signing in and out (ADR 0003, 0007): /signin, the GitHub OAuth flow, /invite/:code, /signout,
 // and the development-only /dev/sign-in-as/:login.
 
-import { RULES, SESSION_COOKIE } from '../config.ts'
+import { isFoundingModerator, RULES, SESSION_COOKIE } from '../config.ts'
 import {
   createModerator,
   type GitHubIdentity,
@@ -152,18 +152,19 @@ export function registerAuth(app: App, web: Web): void {
     }
 
     c.header('Set-Cookie', clearOAuth(), { append: true })
-    const isModerator = config.moderators.includes(identity.login.toLowerCase())
+    // Founding moderators (MODERATORS) are made moderators here; nobody is demoted at sign-in.
+    const founding = isFoundingModerator(config, identity.login)
     const existing = accountByGithubId(db, identity.githubId)
     if (existing) {
       if (existing.banned) return refused(c, 'banned', existing.login)
-      if (!refreshAccount(db, existing.id, identity, isModerator)) {
+      if (!refreshAccount(db, existing.id, identity, founding)) {
         return refused(c, 'login-taken', identity.login)
       }
       return signIn(c, existing.id, state.next)
     }
 
-    // A new member: a moderator starts a branch of the tree; anyone else needs an invitation.
-    if (isModerator) {
+    // A new member: a founding moderator starts a branch of the tree; others need an invitation.
+    if (founding) {
       const created = createModerator(db, identity, now)
       if (!created.ok) return refused(c, 'login-taken', identity.login)
       return signIn(c, created.userId, state.next)
