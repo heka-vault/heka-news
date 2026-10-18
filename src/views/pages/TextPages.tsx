@@ -1,6 +1,8 @@
-// The about page, the sign-in placeholder and the error pages.
+// The about page, the error pages, and a plain message page for refusals and confirmations.
 
+import type { Child } from 'hono/jsx'
 import { SITE } from '../../config.ts'
+import type { RemovedBy } from '../../db/types.ts'
 import { Layout } from '../components/Layout.tsx'
 import type { PageContext } from '../context.ts'
 
@@ -50,7 +52,12 @@ export function AboutPage({
           </p>
           <p>
             You sign in with GitHub. If a member has invited you, the link in your invitation
-            creates your account. Sign-in opens soon; until then the site is read-only.
+            creates your account. After that, <a href="/signin">sign in</a> from any page.
+            {ctx.signin === 'closed' && ' Sign-in opens soon; until then the site is read-only.'}
+          </p>
+          <p>
+            Authors can edit what they wrote for two hours and delete it at any time. An item that
+            three members flag leaves the front page until a moderator looks at it.
           </p>
 
           <h2>What gets posted</h2>
@@ -87,65 +94,80 @@ export function AboutPage({
   )
 }
 
-/** A same-site path to return to after sign-in, or "/". */
-export function safeNext(next: string | undefined): string {
-  if (!next?.startsWith('/') || next.startsWith('//') || next.includes('\\')) return '/'
-  return next
-}
-
-export function SigninPage({ ctx, next }: { ctx: PageContext; next: string }) {
+/** A short page with a heading and a few paragraphs: refusals, limits, confirmations. */
+export function MessagePage(props: {
+  ctx: PageContext
+  title: string
+  heading?: string
+  children: Child
+  description?: string
+}) {
   return (
     <Layout
-      ctx={ctx}
-      title="Sign in"
-      description="Membership in heka news is by invitation; sign-in opens soon."
-      canonical="/signin"
+      ctx={props.ctx}
+      title={props.title}
+      description={props.description ?? props.title}
       noindex
     >
       <div class="wrap">
         <header class="page-head">
-          <h1>Sign in</h1>
+          <h1>{props.heading ?? props.title}</h1>
         </header>
-        <div class="prose reading">
-          <p class="lede">Membership is by invitation; sign-in opens soon.</p>
-          <p>
-            When it opens, members sign in with GitHub, and an invitation link from a member creates
-            a new account. Until then, everything here is public and read-only.{' '}
-            <a href="/about#membership">How membership works</a>
-          </p>
-          <p>
-            <a href={next}>Back to where you were</a>
-          </p>
-        </div>
+        <div class="prose reading message">{props.children}</div>
       </div>
     </Layout>
   )
 }
 
-export function ErrorPage(props: { ctx: PageContext; status: 404 | 410 }) {
+export function ErrorPage(props: {
+  ctx: PageContext
+  status: 404 | 410
+  removedBy?: RemovedBy | null
+  /** Shown under the explanation on a 410 (a moderator's restore form). */
+  children?: Child
+}) {
   const gone = props.status === 410
+  const byAuthor = props.removedBy === 'author'
   return (
     <Layout
       ctx={props.ctx}
-      title={gone ? 'Removed' : 'Not found'}
-      description={gone ? 'A moderator removed this item.' : 'There is no page at this address.'}
+      title={gone ? (byAuthor ? 'Deleted' : 'Removed') : 'Not found'}
+      description={
+        gone
+          ? byAuthor
+            ? 'The author deleted this item.'
+            : 'A moderator removed this item.'
+          : 'There is no page at this address.'
+      }
       noindex
     >
       <div class="wrap">
         <header class="page-head">
-          <h1>{gone ? 'This item was removed' : 'Nothing at this address'}</h1>
+          <h1>
+            {gone
+              ? byAuthor
+                ? 'This item was deleted'
+                : 'This item was removed'
+              : 'Nothing at this address'}
+          </h1>
         </header>
         <div class="prose reading">
           {gone ? (
-            <p>
-              A moderator removed it. The reason is in the <a href="/moderation">moderation log</a>.
-            </p>
+            byAuthor ? (
+              <p>Its author deleted it.</p>
+            ) : (
+              <p>
+                A moderator removed it. The reason is in the{' '}
+                <a href="/moderation">moderation log</a>.
+              </p>
+            )
           ) : (
             <p>
               The link may be mistyped, or the page may never have existed. Try the{' '}
               <a href="/">top items</a> or the <a href="/newest">newest</a>.
             </p>
           )}
+          {props.children}
         </div>
       </div>
     </Layout>

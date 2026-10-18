@@ -11,7 +11,8 @@ a public invite tree and a public moderation log. It is run by [heka](https://he
   here) and **status notes** (up to 500 characters).
 - A front page ranked by points and age, plus newest, posts, status, tag and member pages.
 - Threaded comments that fold without JavaScript, RSS feeds, a sitemap and structured data.
-- Sign-in with GitHub and invitation links are next; the database already has the tables.
+- Sign-in with GitHub, single-use invitation links, voting, flagging, a moderator queue and a
+  public moderation log.
 
 The decisions behind it are short ADRs in [`docs/adr/`](docs/adr), and the visual design is in
 [`docs/design-plan.md`](docs/design-plan.md).
@@ -19,7 +20,8 @@ The decisions behind it are short ADRs in [`docs/adr/`](docs/adr), and the visua
 ## Stack
 
 [Bun](https://bun.sh) and [Hono](https://hono.dev), with every page rendered on the server as
-plain HTML. No client framework, and no JavaScript is sent to the browser. One SQLite file
+plain HTML. No client framework: a few small same-origin scripts make voting, replying and
+previews quicker, and every form works without them. One SQLite file
 (`bun:sqlite`) holds everything; all SQL lives in `src/db/`. Fonts are self-hosted Archivo and
 Source Serif 4.
 
@@ -31,7 +33,11 @@ bun run seed          # fictional seed data in ./data/heka-news.db
 bun run dev           # http://localhost:8080
 ```
 
-`PORT`, `DATABASE_PATH` and `PUBLIC_URL` change the defaults (see `src/config.ts`).
+`PORT`, `DATABASE_PATH` and `PUBLIC_URL` change the defaults (see `src/config.ts`). Without a
+GitHub OAuth app configured, `/signin` lists the seeded members and lets you sign in as any of
+them; that shortcut does not exist when `NODE_ENV=production`. To use GitHub, set
+`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and `SESSION_SECRET`, with the app's callback at
+`<PUBLIC_URL>/auth/github/callback`; logins in `MODERATORS` can sign in without an invitation.
 
 ## Contributing
 
@@ -42,7 +48,7 @@ bun run check         # types, lint, tests, and a smoke test against the real se
 bun run lighthouse    # speed check: Lighthouse on key pages, mobile and desktop (needs Chrome)
 ```
 
-Both must pass. [`CLAUDE.md`](CLAUDE.md) has the layout and the rules the code follows; it is
+The first must pass; note the Lighthouse scores in the pull request. [`CLAUDE.md`](CLAUDE.md) has the layout and the rules the code follows; it is
 written for coding agents and works as well for people. The primary repository is on heka's own
 forge and is mirrored here; pull requests opened on GitHub are carried across by a maintainer.
 

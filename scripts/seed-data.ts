@@ -9,17 +9,11 @@
 // 500-character status note, a 35-character login, fourteen levels of replies, a removed comment
 // with live replies, a member with nothing posted, and a banned member.
 
+import { addFlag } from '../src/db/flags.ts'
 import type { Db } from '../src/db/index.ts'
-import {
-  banUser,
-  createComment,
-  createItem,
-  createTag,
-  createUser,
-  deleteComment,
-  deleteItem,
-  logModeration,
-} from '../src/db/write.ts'
+import { createInvite, revokeInvite } from '../src/db/invites.ts'
+import { banUser, deleteComment, deleteItem, logModeration } from '../src/db/moderation.ts'
+import { createComment, createItem, createTag, createUser } from '../src/db/write.ts'
 
 const H = 3600
 const D = 86400
@@ -618,6 +612,47 @@ export function seedDatabase(db: Db, now = Math.floor(Date.now() / 1000)): void 
       null,
       3,
     )
+
+    // --- Flags and invitations (phase 3) ------------------------------------------------------
+    // A listicle three members flagged: off the front page, waiting in the moderator queue.
+    const listicle = item({
+      kind: 'link',
+      authorId: bollard,
+      title: 'The 50 best AI coding tools of 2026, ranked',
+      url: 'https://listicle.example.com/best-ai-coding-tools-2026-ranked',
+      tags: ['agents'],
+      points: 3,
+      hoursAgo: 2,
+    })
+    addFlag(db, 'item', listicle, quietfox, 'spam', now - 1.5 * H)
+    addFlag(db, 'item', listicle, oxbow, 'spam', now - 1.2 * H)
+    addFlag(db, 'item', listicle, jo, 'off-topic', now - 0.5 * H)
+    // One flag on a comment: in the queue, still in its thread.
+    addFlag(db, 'comment', v1, bollard, 'unkind', now - 3 * H)
+    // quietfox's invitations, one in each state. The codes are random and never shown again.
+    const code = () => new Bun.CryptoHasher('sha256').update(crypto.randomUUID()).digest('hex')
+    createInvite(db, {
+      inviterId: quietfox,
+      codeHash: code(),
+      note: 'For my old team lead, who runs the merge queue at a bank',
+      now: now - 2 * D,
+      ttl: 14 * D,
+    })
+    createInvite(db, {
+      inviterId: quietfox,
+      codeHash: code(),
+      note: '',
+      now: now - 20 * D,
+      ttl: 14 * D,
+    })
+    const withdrawn = createInvite(db, {
+      inviterId: quietfox,
+      codeHash: code(),
+      note: 'Conference contact',
+      now: now - 5 * D,
+      ttl: 14 * D,
+    })
+    revokeInvite(db, withdrawn, now - 4 * D)
 
     // --- Moderation -----------------------------------------------------------------------------
     deleteItem(db, spam, ferrule, 'Spam: paid stars for an unrelated product.', now - 9 * H)

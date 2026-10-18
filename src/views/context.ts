@@ -1,7 +1,18 @@
-// What every view gets from the route: config, assets, the clock and the request path.
+// What every view gets from the route: config, assets, the clock, the request path, and who is
+// signed in (with their CSRF token and the votes the page needs to show).
 
 import type { Config } from '../config.ts'
+import type { Member } from '../db/types.ts'
 import type { Assets } from '../lib/assets.ts'
+
+/** The signed-in member as views see them. */
+export interface Viewer extends Member {
+  /** Goes in every form (and fetch's X-CSRF-Token header). */
+  csrf: string
+}
+
+/** How a visitor can sign in: GitHub, the development shortcut, or not yet. */
+export type SigninMode = 'github' | 'dev' | 'closed'
 
 export interface PageContext {
   config: Config
@@ -12,12 +23,30 @@ export interface PageContext {
   path: string
   /** Path and query, for sign-in return links. */
   returnTo: string
-  /** Always false until phase 3 adds sign-in. */
   signedIn: boolean
+  viewer: Viewer | null
+  signin: SigninMode
+  /** Items and comments on this page the viewer has voted on. */
+  votes: { items: Set<number>; comments: Set<number> }
 }
 
-export type NavKey = 'top' | 'new' | 'posts' | 'status' | null
+export type NavKey = 'top' | 'new' | 'posts' | 'status' | 'replies' | 'mod' | null
 
 export function absoluteUrl(ctx: PageContext, path: string): string {
   return `${ctx.config.publicUrl}${path}`
+}
+
+/** True when the viewer wrote this (by user id). */
+export function isMine(ctx: PageContext, authorId: number): boolean {
+  return ctx.viewer !== null && ctx.viewer.id === authorId
+}
+
+/** True while the author may still edit (RULES.editWindow after posting). */
+export function canEdit(
+  ctx: PageContext,
+  authorId: number,
+  createdAt: number,
+  window: number,
+): boolean {
+  return isMine(ctx, authorId) && ctx.now - createdAt < window
 }

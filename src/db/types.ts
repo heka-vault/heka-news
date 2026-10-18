@@ -7,6 +7,20 @@ export interface UserRef {
   displayName: string | null
 }
 
+/** Who deleted an item or comment: its author ("deleted") or a moderator ("removed"). */
+export type RemovedBy = 'author' | 'moderator'
+
+/** The signed-in member, as a request sees them. */
+export interface Member {
+  id: number
+  login: string
+  displayName: string | null
+  isModerator: boolean
+}
+
+/** The flag reasons a member can pick. The schema also allows 'duplicate' and 'other'. */
+export type FlagReason = 'spam' | 'off-topic' | 'unkind'
+
 /** An item as it appears in a list. bodyHtml is filled for status notes only. */
 export interface ItemSummary {
   id: number
@@ -16,6 +30,7 @@ export interface ItemSummary {
   domain: string | null
   bodyHtml: string | null
   bodyChars: number
+  authorId: number
   author: UserRef
   createdAt: number
   points: number
@@ -30,18 +45,94 @@ export interface ItemDetail extends ItemSummary {
   editedAt: number | null
   deleted: boolean
   deletedAt: number | null
+  removedBy: RemovedBy | null
+  flagCount: number
 }
 
 export interface CommentNode {
   id: number
   parentId: number | null
   depth: number
+  authorId: number
+  author: UserRef
+  createdAt: number
+  editedAt: number | null
+  points: number
+  bodyHtml: string
+  deleted: boolean
+  removedBy: RemovedBy | null
+  children: CommentNode[]
+}
+
+/** One comment with what edit, delete, reply and moderation need. */
+export interface CommentDetail {
+  id: number
+  itemId: number
+  parentId: number | null
+  depth: number
+  authorId: number
+  author: UserRef
+  createdAt: number
+  editedAt: number | null
+  points: number
+  bodyMd: string
+  bodyHtml: string
+  deleted: boolean
+  removedBy: RemovedBy | null
+  /** The item's title, or the start of its text for a status note. */
+  itemTitle: string
+  itemDeleted: boolean
+}
+
+/** A comment in a list away from its thread: /replies and profiles. */
+export interface CommentListing {
+  id: number
+  itemId: number
+  itemTitle: string
   author: UserRef
   createdAt: number
   points: number
   bodyHtml: string
-  deleted: boolean
-  children: CommentNode[]
+  /** For replies: whose comment or item it answers. */
+  inReplyTo: 'item' | 'comment'
+}
+
+export type InviteStatus = 'open' | 'used' | 'expired' | 'revoked'
+
+export interface InviteRow {
+  id: number
+  inviter: UserRef
+  note: string
+  createdAt: number
+  expiresAt: number
+  status: InviteStatus
+  usedBy: UserRef | null
+  usedAt: number | null
+}
+
+export interface FlagSummary {
+  /** Reason to count, open flags only. */
+  reasons: Partial<Record<string, number>>
+  total: number
+  latestAt: number
+}
+
+export interface FlaggedItem extends FlagSummary {
+  item: ItemSummary
+}
+
+export interface FlaggedComment extends FlagSummary {
+  comment: CommentListing
+}
+
+/** A removal a moderator may undo, for the queue. */
+export interface Removal {
+  kind: 'item' | 'comment'
+  id: number
+  itemId: number
+  label: string
+  author: string
+  removedAt: number
 }
 
 export interface UserProfile {
@@ -49,6 +140,7 @@ export interface UserProfile {
   login: string
   displayName: string | null
   bio: string
+  bioHtml: string
   createdAt: number
   isModerator: boolean
   banned: boolean

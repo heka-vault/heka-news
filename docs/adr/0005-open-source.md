@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-10-18
+- Amended by: 0007 (a second CI secret, the Heka Vault read key)
 
 ## Context
 
@@ -20,8 +21,9 @@ readable, forkable and open to pull requests.
   internal codenames, tokens or private URLs. The exceptions are infrastructure config confined
   to `.woodpecker/` and `deploy/` (the LAN registry address and the stack path on the server), as
   in heka's other public site.
-- **Secrets never enter the repository.** The only CI secret is the Discord webhook for the
-  deploy notice, held by Woodpecker.
+- **Secrets never enter the repository.** CI secrets are held by Woodpecker: the Discord webhook
+  for the deploy notice, and (ADR 0007) a read key for Heka Vault, from which the deploy fetches
+  the site's own secrets into a mode-600 file on the server.
 
 ## Consequences
 

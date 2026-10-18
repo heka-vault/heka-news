@@ -19,7 +19,11 @@ const checks: [path: string, status: number, marker: string][] = [
   ['/tree', 200, 'class="tree"'],
   ['/moderation', 200, 'class="modlog"'],
   ['/about', 200, 'How membership works'],
-  ['/signin', 200, 'sign-in opens soon'],
+  ['/signin', 200, '<h1>Sign in</h1>'],
+  // Members-only pages send a visitor to sign in (fetch follows the redirect).
+  ['/submit', 200, '<h1>Sign in</h1>'],
+  ['/replies', 200, '<h1>Sign in</h1>'],
+  [`/invite/${'x'.repeat(22)}`, 404, 'There is no invitation at this address'],
   ['/rss', 200, '<rss version="2.0"'],
   ['/t/harness/rss', 200, '<category>harness</category>'],
   ['/sitemap.xml', 200, '<urlset'],

@@ -22,6 +22,7 @@
  *   --lane-ink on --bg (rank numerals) 5.7 / 10.5, --bar-muted on --bar-bg (nav) 6.6 / 6.9
  *   --tick-read on --bar-bg (focus in the bar) 6.1 / 6.8, --stamp on --bg (vote mark) 6.9 / 8.4
  *   --ink-muted on the :target tint (12% --stamp over --bg-raised) 5.6 / 5.9
+ *   --stop on --bg (errors, destructive outlines) 6.4 / 8.9, on --bg-raised 6.9 / 8.2
  */
 
 :root {
@@ -122,6 +123,15 @@
   --bar-ink: var(--panel-ink);
   --bar-muted: var(--panel-muted);
 
+  /* Stop red: a machine's emergency stop. Error text, an over-limit count, the outline of a button
+   * that removes or deletes. Never a fill behind text. (docs/design-plan.md, members' screens) */
+  --stop: #a3261c;
+
+  /* Form fields: the floor's raised paper, a muted rule. */
+  --field-bg: var(--bg-raised);
+  --field-border: var(--ink-muted);
+  --field-line: 1.5px;
+
   /* Comment and invite-tree nesting. */
   --indent: 1.25rem;
   --indent-deep: 0.5rem;
@@ -160,6 +170,8 @@
 
     --stamp: #b8a4ff;
     --focus: #b8a4ff;
+
+    --stop: #ff9d8a;
   }
 }
 

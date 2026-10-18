@@ -3,8 +3,9 @@ import { seedDatabase } from '../scripts/seed-data.ts'
 import { commentTree, countTree } from '../src/db/comments.ts'
 import { migrate, openDb } from '../src/db/index.ts'
 import { getItem, listNewest, listRankCandidates } from '../src/db/items.ts'
+import { deleteComment } from '../src/db/moderation.ts'
 import { inviteTree } from '../src/db/users.ts'
-import { createComment, createItem, createTag, createUser, deleteComment } from '../src/db/write.ts'
+import { createComment, createItem, createTag, createUser } from '../src/db/write.ts'
 import { NOW } from './helpers.ts'
 
 function fresh() {

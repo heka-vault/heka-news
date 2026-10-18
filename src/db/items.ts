@@ -1,7 +1,7 @@
 // Reading items: lists, one item, and the sitemap. All item SQL for reads lives here.
 
 import type { Db } from './index.ts'
-import type { ItemDetail, ItemKind, ItemSummary, SitemapEntry } from './types.ts'
+import type { ItemDetail, ItemKind, ItemSummary, RemovedBy, SitemapEntry } from './types.ts'
 
 interface SummaryRow {
   id: number
@@ -11,6 +11,7 @@ interface SummaryRow {
   domain: string | null
   body_html: string | null
   body_chars: number
+  author_id: number
   login: string
   display_name: string | null
   created_at: number
@@ -22,7 +23,7 @@ interface SummaryRow {
 const SUMMARY_COLUMNS = `
   i.id, i.kind, i.title, i.url, i.domain,
   CASE WHEN i.kind = 'status' THEN i.body_html END AS body_html,
-  length(i.body_md) AS body_chars,
+  length(i.body_md) AS body_chars, i.author_id,
   u.login, u.display_name, i.created_at, i.points, i.comment_count`
 
 function tagsFor(db: Db, ids: number[]): Map<number, string[]> {
@@ -55,6 +56,7 @@ function toSummaries(db: Db, rows: SummaryRow[]): ItemSummary[] {
     domain: row.domain,
     bodyHtml: row.body_html,
     bodyChars: row.body_chars,
+    authorId: row.author_id,
     author: { login: row.login, displayName: row.display_name },
     createdAt: row.created_at,
     points: row.points,
@@ -63,9 +65,18 @@ function toSummaries(db: Db, rows: SummaryRow[]): ItemSummary[] {
   }))
 }
 
-/** The newest `limit` live items: the candidates the front page ranks (ADR 0004). */
-export function listRankCandidates(db: Db, limit: number): ItemSummary[] {
-  return listNewest(db, { limit, offset: 0 })
+/**
+ * The newest `limit` live items: the candidates the front page ranks (ADR 0004). Items with
+ * `flagThreshold` or more open flags stay off it until a moderator removes or keeps them.
+ */
+export function listRankCandidates(db: Db, limit: number, flagThreshold = 3): ItemSummary[] {
+  const rows = db
+    .query<SummaryRow, [number, number]>(
+      `SELECT ${SUMMARY_COLUMNS} FROM items i JOIN users u ON u.id = i.author_id
+       WHERE i.deleted = 0 AND i.flag_count < ? ORDER BY i.created_at DESC LIMIT ?`,
+    )
+    .all(flagThreshold, limit)
+  return toSummaries(db, rows)
 }
 
 /** Live items, newest first, optionally of one kind. */
@@ -128,6 +139,18 @@ interface DetailRow extends SummaryRow {
   edited_at: number | null
   deleted: number
   deleted_at: number | null
+  deleted_by: number | null
+  flag_count: number
+}
+
+/** Author when the author deleted the row; moderator otherwise (including rows from before 0002). */
+export function removedBy(row: {
+  deleted: number
+  deleted_by: number | null
+  author_id: number
+}): RemovedBy | null {
+  if (row.deleted !== 1) return null
+  return row.deleted_by === row.author_id ? 'author' : 'moderator'
 }
 
 /** One item by id, deleted or not; null if there is no such item. */
@@ -135,7 +158,7 @@ export function getItem(db: Db, id: number): ItemDetail | null {
   const row = db
     .query<DetailRow, [number]>(
       `SELECT ${SUMMARY_COLUMNS}, i.body_md, i.body_html AS full_html, i.edited_at,
-              i.deleted, i.deleted_at
+              i.deleted, i.deleted_at, i.deleted_by, i.flag_count
        FROM items i JOIN users u ON u.id = i.author_id WHERE i.id = ?`,
     )
     .get(id)
@@ -149,7 +172,38 @@ export function getItem(db: Db, id: number): ItemDetail | null {
     editedAt: row.edited_at,
     deleted: row.deleted === 1,
     deletedAt: row.deleted_at,
+    removedBy: removedBy(row),
+    flagCount: row.flag_count,
   }
+}
+
+/** Item summaries by id, deleted or not, in the order given. */
+export function itemSummaries(db: Db, ids: number[]): ItemSummary[] {
+  if (ids.length === 0) return []
+  const rows = db
+    .query<SummaryRow, number[]>(
+      `SELECT ${SUMMARY_COLUMNS} FROM items i JOIN users u ON u.id = i.author_id
+       WHERE i.id IN (${ids.map(() => '?').join(',')})`,
+    )
+    .all(...ids)
+  const byId = new Map(toSummaries(db, rows).map((item) => [item.id, item]))
+  return ids.map((id) => byId.get(id)).filter((item): item is ItemSummary => item !== undefined)
+}
+
+/** Live links on a domain posted since `since`, newest first: candidates for a duplicate. */
+export function recentLinksOnDomain(
+  db: Db,
+  domain: string,
+  since: number,
+): { id: number; url: string; title: string; createdAt: number }[] {
+  return db
+    .query<{ id: number; url: string; title: string; created_at: number }, [string, number]>(
+      `SELECT id, url, title, created_at FROM items
+       WHERE kind = 'link' AND deleted = 0 AND domain = ? AND created_at >= ?
+       ORDER BY created_at DESC LIMIT 200`,
+    )
+    .all(domain, since)
+    .map((row) => ({ id: row.id, url: row.url, title: row.title, createdAt: row.created_at }))
 }
 
 /** Every live item's path and last change, for /sitemap.xml. */

@@ -11,41 +11,47 @@ This repository is **public** (MIT, mirrored to GitHub). Everything in it is rea
 Before any non-trivial task, read:
 
 1. `docs/adr/` for why things are the way they are (stack, storage, auth, ranking, open source,
-   item kinds). Do not reverse an ADR in passing; write a new one that supersedes it.
+   item kinds, sessions and CSRF). Do not reverse an ADR in passing; write a new one that supersedes it.
 2. `docs/design-plan.md` before any visual change. It is the plan the UI was built from.
 3. `.agents/skills/VENDORED.md` for the design, motion and writing skills (the table at the end of
    this file says which applies when).
 
 ## Status
 
-Phases 1 and 2 are done: decisions, the full schema, and a read-only site with seed data. Phase 3
-adds GitHub sign-in, invitation links, posting, commenting, voting and flagging. Until then "Sign
-in" leads to `/signin`, which explains that membership is by invitation and sign-in opens soon,
-and vote marks link there too.
+Phases 1 to 5 are built: the read-only site, then GitHub sign-in and invitation links, posting,
+commenting, voting and flagging, the moderator queue and its public log, profiles, settings and
+`/replies` (ADR 0007). Sign-in opens when the GitHub app's credentials are in the environment;
+until then `/signin` says it opens soon. Locally, with no GitHub app and outside production,
+`/signin` lists the seeded members and `/dev/sign-in-as/:login` signs you in as one.
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `src/server.ts` | Process entry: open and migrate the database, re-render stale HTML, serve |
-| `src/app.tsx` | `createApp({ db, config, clock })`: every route, plus response finishing |
-| `src/config.ts` | `SITE` constants, `SESSION_COOKIE`, `PAGE_SIZE`, and `loadConfig()` from the environment |
+| `src/app.tsx` | `createApp({ db, config, clock, github })`: reading routes, the session middleware, response finishing |
+| `src/routes/` | `auth.tsx` (sign-in, invites, sign-out, dev sign-in), `items.tsx` (submit, edit, delete, comments, votes, flags, preview), `members.tsx` (replies, settings), `moderation.tsx`; `web.ts` has the POST guard (origin, session, CSRF) and rate limiting |
+| `src/config.ts` | `SITE`, `SESSION_COOKIE`, `PAGE_SIZE`, `RULES` (windows, expiries, thresholds), `RATE_LIMITS`, `loadConfig()` |
 | `src/db/index.ts` | The only file that imports `bun:sqlite`: `openDb()`, pragmas, `migrate()` |
 | `src/db/migrations/` | Plain SQL, `NNNN_name.sql`, applied in order at startup. Never edit one that has shipped |
 | `src/db/{items,comments,users,tags,modlog}.ts` | Read queries, one named function each |
-| `src/db/write.ts` | Writes: users, tags, items, comments, moderation; keeps counters and cached HTML in step |
+| `src/db/write.ts` | Writes: users, tags, items, comments, profiles; keeps counters and cached HTML in step |
+| `src/db/{accounts,sessions,invites,votes,flags,ratelimit,moderation}.ts` | Sign-in accounts, sessions, invitations, votes, flags, rate limits; every moderator action with its log row |
 | `src/db/types.ts` | The shapes `src/db/` returns. Views depend on these, never on columns |
 | `src/lib/markdown.ts` | The one markdown pipeline (markdown-it, then sanitize-html). `MARKDOWN_VERSION` |
 | `src/lib/rank.ts` | The front page formula (ADR 0004) |
 | `src/lib/http.ts` | Cache-Control switch, ETag/304, compression, security headers |
+| `src/lib/{oauth,session,crypto}.ts` | GitHub OAuth (signed state, PKCE), cookies and CSRF tokens, hashes and HMACs |
+| `src/lib/validate.ts` | Validation of every form, with the messages the form shows; `normalizeUrl` for duplicates |
+| `src/client/` | Same-origin browser modules, one per feature (votes, replies, forms, times, copy), transpiled and fingerprinted at startup |
 | `src/lib/jsonld.ts`, `src/lib/feeds.ts` | Structured data; RSS, sitemap, robots.txt |
 | `src/lib/assets.ts` | Builds the inline stylesheet and the font routes at startup |
 | `src/lib/format.ts` | Numbers, plurals, relative times, domains |
-| `src/views/` | Hono JSX: `components/` (Layout, Items, Comments, Mark, Time) and `pages/` |
+| `src/views/` | Hono JSX: `components/` (Layout, Items, Comments, Forms, Mark, Time) and `pages/` |
 | `src/styles/` | `tokens.css` (from hekafactory.com, plus additions), `base.css`, `app.css` |
 | `public/` | Favicon, touch icon, `og.png` (`sh scripts/render-assets.sh` re-renders it) |
 | `scripts/` | `seed.ts` and `seed-data.ts`, `smoke.ts`, `lighthouse.ts`, `serve-seeded.ts`, `screenshots.sh` |
-| `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes |
+| `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes, auth (OAuth, sessions, CSRF, invites, dev sign-in), members (posting, edits, votes, flags, limits), moderation |
 | `Dockerfile`, `deploy/prod/compose.yaml`, `.woodpecker/` | The image, the production stack, CI and CD |
 
 ## Commands
@@ -89,6 +95,10 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   stale-while-revalidate=300`; any request carrying the `heka_session` cookie gets `private,
   no-store` (`src/lib/http.ts`). A personalized response must never be served from a shared
   cache, so never set a public Cache-Control on a route that reads the session.
+- **Every state-changing request is a POST through `guardPost`** (`src/routes/web.ts`): same
+  origin, signed in, CSRF token. Anything that creates rows also goes through `rateLimited`. Every
+  moderator action goes through a `src/db/moderation.ts` function, which writes the public log in
+  the same transaction. Every form works without JavaScript; `src/client/` only improves it.
 - **Tokens only.** No hex values, font names or pixel sizes in components or `app.css`; use the
   custom properties in `tokens.css`. The values shared with hekafactory.com are changed there
   first, then copied here.
@@ -101,8 +111,10 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   refuses `NODE_ENV=production`. Production starts empty; the empty states are designed. Seed
   handles are fictional; never put a real person in the seed.
 - **This repository is public.** No hostnames, IP addresses, internal machine or project names,
-  tokens or private URLs anywhere, except the registry address and stack path in `.woodpecker/`
-  and `deploy/`. No secrets, ever: the only CI secret (`discord_webhook`) lives in Woodpecker.
+  tokens or private URLs anywhere, except the registry and vault addresses and the stack path in
+  `.woodpecker/` and `deploy/`. No secrets, ever: the CI secrets (`discord_webhook`,
+  `heka_vault_token`) live in Woodpecker, and the site's own (`SESSION_SECRET`,
+  `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) in Heka Vault, fetched at deploy time (ADR 0007).
 
 ## Words
 
@@ -130,7 +142,8 @@ group on the site; moderators are "three of us".
 
 `main` is production. A push to `main` runs `.woodpecker/deploy.yaml`: build the image tagged with
 the commit and push it to the LAN registry, copy `deploy/prod/compose.yaml` to the stack
-directory, write `TAG`, pull and recreate, and fail unless the container's `/healthz` (checked
+directory, write `TAG`, fetch the site's secrets from Heka Vault (`heka-news`, `prod`) into a
+mode-600 `vault.env` that compose loads, pull and recreate, and fail unless the container's `/healthz` (checked
 with `compose exec ... bun -e`, since the slim image has no wget) reports the commit. Then it
 checks `https://news.hekafactory.com/healthz` and only warns on a mismatch, prunes, and posts to
 Discord. A Cloudflare tunnel forwards the domain to `127.0.0.1:3311`. The database is
