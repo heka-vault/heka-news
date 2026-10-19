@@ -35,6 +35,7 @@ import { robotsTxt, rssFeed, sitemap } from './lib/feeds.ts'
 import { CACHE_IMMUTABLE, CACHE_NONE, CACHE_STATIC, finishResponse } from './lib/http.ts'
 import { websiteJsonLd } from './lib/jsonld.ts'
 import { type GitHubClient, githubClient } from './lib/oauth.ts'
+import { createOutbox, type Outbox } from './lib/outbox.ts'
 import { rankItems } from './lib/rank.ts'
 import {
   clearSessionCookie,
@@ -45,6 +46,7 @@ import {
 } from './lib/session.ts'
 import type { Fetch } from './lib/talk.ts'
 import { registerAuth } from './routes/auth.tsx'
+import { registerBridge } from './routes/bridge.ts'
 import { registerDiscord } from './routes/discord.tsx'
 import { registerItems } from './routes/items.tsx'
 import { registerMembers } from './routes/members.tsx'
@@ -79,6 +81,8 @@ export interface AppOptions {
   fetch?: Fetch
   /** Discord's OAuth endpoints, for linking (ADR 0009); tests pass a fake. */
   discord?: DiscordOAuthClient | null
+  /** The Discord bridge's outbox (ADR 0009). The server passes one that sends as it records. */
+  outbox?: Outbox
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -113,6 +117,15 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
       : config.discord
         ? discordOAuthClient(config.discord)
         : null
+  const outbox =
+    opts.outbox ??
+    createOutbox({
+      db,
+      bridge: config.bridge,
+      publicUrl: config.publicUrl,
+      clock,
+      fetch: opts.fetch ?? fetch,
+    })
   const origin = config.publicUrl
   const app = new Hono<AppEnv>()
 
@@ -171,6 +184,7 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
     clock,
     github,
     discord,
+    outbox,
     signin,
     ctxOf,
     html,
@@ -582,6 +596,7 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
   registerMembers(app, web)
   registerModeration(app, web)
   registerTalk(app, web, opts.fetch ?? fetch)
+  registerBridge(app, web)
 
   // public/: favicon, touch icon, Open Graph image.
   app.get('/:file', async (c, next) => {

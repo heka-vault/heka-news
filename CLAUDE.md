@@ -22,8 +22,8 @@ Phases 1 to 5 are built: the read-only site, then GitHub sign-in and invitation 
 commenting, voting and flagging, the moderator queue and its public log, profiles, settings and
 `/replies` (ADR 0007). It also serves "Talk to us" for hekafactory.com: conversation tokens for an
 ElevenLabs agent and its post-call webhook (ADR 0008). Members can connect a Discord account from
-`/settings` (ADR 0009, the first part of the Discord bridge; the forum threads and the relay bot
-come next). Founding moderators come from `MODERATORS`; moderators make and remove
+`/settings`, every new item gets a thread in the Discord forum, comments go both ways, and the
+relay bot (its own repository) calls `/api/discord/events` (ADR 0009). Founding moderators come from `MODERATORS`; moderators make and remove
 other moderators from a member's profile (ADR 0003). Sign-in opens when the GitHub app's credentials are in the environment;
 until then `/signin` says it opens soon. Locally, with no GitHub app and outside production,
 `/signin` lists the seeded members and `/dev/sign-in-as/:login` signs you in as one.
@@ -48,6 +48,7 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 | `src/lib/http.ts` | Cache-Control switch, ETag/304, compression, security headers |
 | `src/lib/{oauth,session,crypto}.ts` | GitHub OAuth (signed state, PKCE), cookies and CSRF tokens, hashes and HMACs |
 | `src/lib/discord.ts`, `src/db/discord.ts` | Discord OAuth for linking (signed state bound to the member); `discord_links` |
+| `src/lib/outbox.ts`, `src/routes/bridge.ts`, `src/db/bridge.ts` | The Discord bridge (ADR 0009): the outbox sent through the forum webhook, the relay bot's endpoints, threads, carried messages and nudges |
 | `src/lib/validate.ts` | Validation of every form, with the messages the form shows; `normalizeUrl` for duplicates |
 | `src/client/` | Same-origin browser modules, one per feature (votes, replies, forms, times, copy), transpiled and fingerprinted at startup |
 | `src/lib/jsonld.ts`, `src/lib/feeds.ts` | Structured data; RSS, sitemap, robots.txt |
@@ -124,8 +125,14 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   `.woodpecker/` and `deploy/`. No secrets, ever: the CI secrets (`discord_webhook`,
   `heka_vault_token`) live in Woodpecker, and the site's own (`SESSION_SECRET`,
   `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ELEVENLABS_API_KEY`, `ELEVENLABS_WEBHOOK_SECRET`,
-  `DISCORD_TALK_WEBHOOK`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`) in Heka Vault, fetched at
-  deploy time (ADRs 0007, 0008, 0009).
+  `DISCORD_TALK_WEBHOOK`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_FORUM_WEBHOOK`,
+  `DISCORD_BOT_TOKEN`, `DISCORD_BRIDGE_TOKEN`) in Heka Vault, fetched at deploy time (ADRs 0007,
+  0008, 0009).
+- **Anything that changes an item or a comment records it for Discord.** A route that creates,
+  edits, deletes, removes or restores one calls `web.outbox.record(...)` after the write succeeds;
+  the outbox does nothing until `DISCORD_FORUM_WEBHOOK` is set. `/api/discord/*` is the one place a
+  comment is written without `guardPost`: the bridge token stands in for it, and the same
+  validation and rate limit apply (ADR 0009).
 - **"Talk to us" never hands out the key.** `/api/talk/token` returns a conversation token, only to
   an origin in `TALK_ALLOWED_ORIGINS`, within the per-visitor and daily limits. Nothing logs a key,
   a token or a visitor's address (ADR 0008). Change the agent through `docs/talk-agent.md`.

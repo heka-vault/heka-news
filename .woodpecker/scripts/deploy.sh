@@ -93,7 +93,9 @@ if [ -n "${HEKA_VAULT_TOKEN:-}" ]; then
   esac
   echo "Heka Vault ${vault_project}/${vault_env}: $(grep -Ec '^(export )?[A-Za-z_][A-Za-z0-9_]*=' "$vault_tmp" || true) keys"
   for key in SESSION_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET \
-    ELEVENLABS_API_KEY ELEVENLABS_WEBHOOK_SECRET DISCORD_TALK_WEBHOOK; do
+    ELEVENLABS_API_KEY ELEVENLABS_WEBHOOK_SECRET DISCORD_TALK_WEBHOOK \
+    DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_FORUM_WEBHOOK DISCORD_BOT_TOKEN \
+    DISCORD_BRIDGE_TOKEN; do
     if vault_has "$key"; then echo "  ${key} is set"; else echo "  ${key} is missing"; fi
   done
   if vault_has GITHUB_CLIENT_ID && vault_has GITHUB_CLIENT_SECRET && vault_has SESSION_SECRET; then

@@ -32,23 +32,36 @@ member's login.
 
 **Out to Discord: the site posts, through a webhook.** A webhook on a forum channel can open a post
 (`thread_name`) and write into an existing one (`thread_id`) under any name and avatar. So heka news
-does the outbound half itself, with no bot:
+does the outbound half itself (`src/lib/outbox.ts`), with no gateway connection:
 
 - A new item (link, post or status) opens a forum post: the title, the domain or an excerpt, who
   posted it, its tags, and a link here. Items from before the bridge get no thread.
 - A comment made here is posted into the item's thread under the member's login and avatar, with
   the first line of the parent quoted when it is a reply, cut at 2,000 characters with a link to
   the rest.
-- Edits and deletions here edit or delete those webhook messages; a retitled item renames its
-  thread; an item a moderator removes gets a closing message and its thread is locked and archived.
+- Edits and deletions here edit or delete those webhook messages; a retitled or retagged item
+  updates its first message and renames its thread; an item that is removed or deleted gets a closing
+  message and its thread is locked and archived, and a restored one is reopened.
 
-Outbound work goes into an outbox table and is sent by the same process after the response, so a
-Discord outage never slows a page or loses a message.
+A webhook cannot rename, lock or archive a thread, so for those three calls heka news also holds
+the bot's token (`DISCORD_BOT_TOKEN`), and the bot is invited with Manage Threads. Without the token
+those steps are skipped and the rest still works.
+
+Outbound work goes into an outbox table (`discord_outbox`) and is sent by the same process right
+after the response, and every minute for retries, so a Discord outage never slows a page or loses a
+message. The queue is strictly first in, first out: it stops at the first row waiting for a retry,
+so a comment never goes out before its thread exists. A row names what changed, and the message is
+built from the rows when it is sent, so a comment edited and deleted before Discord saw it goes out
+once, as a deletion. Discord refusing a request (4xx other than 429) drops it; anything else is
+retried with backoff, eight times at most.
 
 **In from Discord: a relay bot.** A separate service holds the gateway connection and keeps no
 state. For each message created, edited or deleted in a bridged thread it calls
-`POST /api/discord/events` here with a bearer token (`DISCORD_BRIDGE_TOKEN`); the endpoint answers
-404 when the token is not configured. heka news resolves the member from `discord_links`, the item
+`POST /api/discord/events` here (`src/routes/bridge.ts`) with a bearer token
+(`DISCORD_BRIDGE_TOKEN`); the endpoint answers 404 when the token is not configured. It turns
+mentions, emoji and attachments into text before sending. The answer tells it what to do on
+Discord: `carried`, `unlinked` (with `nudge` the first time), `refused` (with a `reason`, and
+`notify` unless the member is banned), `ignored` or `duplicate`. heka news resolves the member from `discord_links`, the item
 from the thread, and the parent comment from the replied-to message, then applies the same
 validation and the same hourly comment limit as the comment form, and stores the comment marked
 "via Discord".
@@ -59,8 +72,8 @@ validation and the same hourly comment limit as the comment form, and stores the
 - An edit within the edit window (`RULES.editWindow`) updates the comment; later edits stay on
   Discord. Deleting the message deletes the comment, leaving replies under "[deleted]".
 - Each Discord message is carried at most once (a unique message id), so the bot can replay safely.
-  On reconnect it asks which threads were active in the last 14 days and the newest message carried
-  in each, and replays what it missed.
+  On reconnect it asks `GET /api/discord/threads?since=` for the threads active in the last 14 days
+  and the newest message carried in each, and replays what it missed.
 - Nothing here deletes a message a person wrote on Discord; the server's own moderators handle
   Discord.
 - Messages from webhooks are ignored, which is what keeps the two halves from echoing each other.
@@ -75,7 +88,8 @@ Votes, reactions and tags are not synced.
 - The database keeps one writer. The bot can be redeployed, restarted or replaced without touching
   it, and missing a few minutes of Discord costs nothing.
 - New secrets in Heka Vault: `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` (linking),
-  `DISCORD_FORUM_WEBHOOK` (outbound) and `DISCORD_BRIDGE_TOKEN` (inbound). Each part stays off until
-  its values are set.
+  `DISCORD_FORUM_WEBHOOK` and `DISCORD_BOT_TOKEN` (outbound) and `DISCORD_BRIDGE_TOKEN` (inbound).
+  Each part stays off until its values are set. Items posted before the webhook is set never get a
+  thread.
 - Members' words written on Discord are published here. The settings page says so before anyone
   connects.

@@ -171,6 +171,7 @@ export function registerModeration(app: App, web: Web): void {
     const ok = await modPost(c, (ctx, reason) => itemPage(c, ctx, removeItemOpts(id, reason), 422))
     if (ok instanceof Response) return ok
     if (!deleteItem(db, id, ok.viewer.id, ok.reason, clock())) return web.notFound(c)
+    web.outbox.record('item_removed', { itemId: id })
     return c.redirect('/mod', 303)
   })
 
@@ -193,6 +194,7 @@ export function registerModeration(app: App, web: Web): void {
     )
     if (ok instanceof Response) return ok
     if (!restoreItem(db, id, ok.viewer.id, ok.reason, clock())) return web.notFound(c)
+    web.outbox.record('item_restored', { itemId: id })
     return c.redirect(`/item/${id}`, 303)
   })
 
@@ -280,6 +282,7 @@ export function registerModeration(app: App, web: Web): void {
     }
     const id = idParam(c) ?? 0
     if (!retagItem(db, id, tags, guard.viewer.id, reason.value, clock())) return web.notFound(c)
+    web.outbox.record('item_updated', { itemId: id })
     return c.redirect(`/item/${id}`, 303)
   })
 
@@ -346,6 +349,7 @@ export function registerModeration(app: App, web: Web): void {
     if (ok instanceof Response) return ok
     const comment = getComment(db, id)
     if (!comment || !deleteComment(db, id, ok.viewer.id, ok.reason, clock())) return web.notFound(c)
+    web.outbox.record('comment_deleted', { commentId: id })
     return c.redirect(`/item/${comment.itemId}#c${id}`, 303)
   })
 
@@ -370,6 +374,7 @@ export function registerModeration(app: App, web: Web): void {
     const comment = getComment(db, id)
     if (!comment || !restoreComment(db, id, ok.viewer.id, ok.reason, clock()))
       return web.notFound(c)
+    web.outbox.record('comment_created', { commentId: id })
     return c.redirect(`/item/${comment.itemId}#c${id}`, 303)
   })
 

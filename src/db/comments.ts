@@ -18,10 +18,11 @@ interface CommentRow {
   body_html: string
   deleted: number
   deleted_by: number | null
+  source: string
 }
 
 const NODE_COLUMNS = `c.id, c.parent_id, c.depth, c.author_id, u.login, u.display_name, c.created_at,
-  c.edited_at, c.points, c.body_html, c.deleted, c.deleted_by`
+  c.edited_at, c.points, c.body_html, c.deleted, c.deleted_by, c.source`
 
 function toNode(row: CommentRow): CommentNode {
   return {
@@ -36,6 +37,7 @@ function toNode(row: CommentRow): CommentNode {
     bodyHtml: row.deleted ? '' : row.body_html,
     deleted: row.deleted === 1,
     removedBy: removedBy(row),
+    viaDiscord: row.source === 'discord',
     children: [],
   }
 }

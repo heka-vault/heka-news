@@ -11,6 +11,7 @@ import { buildAssets } from '../src/lib/assets.ts'
 import { randomToken } from '../src/lib/crypto.ts'
 import type { DiscordOAuthClient, DiscordUser } from '../src/lib/discord.ts'
 import type { GitHubClient, GitHubProfile } from '../src/lib/oauth.ts'
+import { createOutbox, type Outbox } from '../src/lib/outbox.ts'
 import { csrfToken, sessionId } from '../src/lib/session.ts'
 import type { Fetch } from '../src/lib/talk.ts'
 
@@ -28,6 +29,8 @@ export interface AppFixture {
   /** Move the clock. */
   advance: (seconds: number) => void
   now: () => number
+  /** The Discord bridge's outbox; tests call drain() to send. */
+  outbox: Outbox
 }
 
 /**
@@ -53,6 +56,16 @@ export function makeApp(
     ...opts.env,
   })
   let now = NOW
+  const fetchImpl: Fetch =
+    // Nothing in a test reaches the network: an unexpected request fails loudly.
+    opts.fetch ?? (async (input) => Promise.reject(new Error(`unexpected fetch ${input}`)))
+  const outbox = createOutbox({
+    db,
+    bridge: config.bridge,
+    publicUrl: config.publicUrl,
+    clock: () => now,
+    fetch: fetchImpl,
+  })
   const app = createApp({
     db,
     config,
@@ -60,8 +73,8 @@ export function makeApp(
     clock: () => now,
     github: opts.github ?? null,
     discord: opts.discord ?? null,
-    // Nothing in a test reaches the network: an unexpected request fails loudly.
-    fetch: opts.fetch ?? (async (input) => Promise.reject(new Error(`unexpected fetch ${input}`))),
+    fetch: fetchImpl,
+    outbox,
   })
   const get = (path: string, headers: Record<string, string> = {}) => app.request(path, { headers })
   return {
@@ -72,6 +85,7 @@ export function makeApp(
       now += seconds
     },
     now: () => now,
+    outbox,
   }
 }
 

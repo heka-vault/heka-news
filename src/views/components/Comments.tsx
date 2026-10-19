@@ -104,6 +104,7 @@ export function Comment({
               {plural(node.points, 'point')}
             </span>
             {node.editedAt && <span class="c-edited">edited</span>}
+            {node.viaDiscord && <span class="c-via">via Discord</span>}
           </>
         )}{' '}
         <span class="c-folded">({plural(hidden, 'comment')} folded)</span>
