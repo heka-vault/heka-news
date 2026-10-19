@@ -20,7 +20,8 @@ Before any non-trivial task, read:
 
 Phases 1 to 5 are built: the read-only site, then GitHub sign-in and invitation links, posting,
 commenting, voting and flagging, the moderator queue and its public log, profiles, settings and
-`/replies` (ADR 0007). Founding moderators come from `MODERATORS`; moderators make and remove
+`/replies` (ADR 0007). It also serves "Talk to us" for hekafactory.com: conversation tokens for an
+ElevenLabs agent and its post-call webhook (ADR 0008). Founding moderators come from `MODERATORS`; moderators make and remove
 other moderators from a member's profile (ADR 0003). Sign-in opens when the GitHub app's credentials are in the environment;
 until then `/signin` says it opens soon. Locally, with no GitHub app and outside production,
 `/signin` lists the seeded members and `/dev/sign-in-as/:login` signs you in as one.
@@ -31,13 +32,14 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 |---|---|
 | `src/server.ts` | Process entry: open and migrate the database, re-render stale HTML, serve |
 | `src/app.tsx` | `createApp({ db, config, clock, github })`: reading routes, the session middleware, response finishing |
-| `src/routes/` | `auth.tsx` (sign-in, invites, sign-out, dev sign-in), `items.tsx` (submit, edit, delete, comments, votes, flags, preview), `members.tsx` (replies, settings), `moderation.tsx`; `web.ts` has the POST guard (origin, session, CSRF) and rate limiting |
+| `src/routes/` | `auth.tsx` (sign-in, invites, sign-out, dev sign-in), `items.tsx` (submit, edit, delete, comments, votes, flags, preview), `members.tsx` (replies, settings), `moderation.tsx`, `talk.ts` (the "Talk to us" token and webhook, ADR 0008); `web.ts` has the POST guard (origin, session, CSRF) and rate limiting |
 | `src/config.ts` | `SITE`, `SESSION_COOKIE`, `PAGE_SIZE`, `RULES` (windows, expiries, thresholds), `RATE_LIMITS`, `loadConfig()` |
 | `src/db/index.ts` | The only file that imports `bun:sqlite`: `openDb()`, pragmas, `migrate()` |
 | `src/db/migrations/` | Plain SQL, `NNNN_name.sql`, applied in order at startup. Never edit one that has shipped |
 | `src/db/{items,comments,users,tags,modlog}.ts` | Read queries, one named function each |
 | `src/db/write.ts` | Writes: users, tags, items, comments, profiles; keeps counters and cached HTML in step |
 | `src/db/{accounts,sessions,invites,votes,flags,ratelimit,moderation}.ts` | Sign-in accounts, sessions, invitations, votes, flags, rate limits; every moderator action (including making and removing moderators) with its log row |
+| `src/db/talk.ts`, `src/lib/talk.ts` | "Talk to us": per-visitor and daily limits, posted conversations; the ElevenLabs token request, the webhook signature, the Discord message |
 | `src/db/types.ts` | The shapes `src/db/` returns. Views depend on these, never on columns |
 | `src/lib/markdown.ts` | The one markdown pipeline (markdown-it, then sanitize-html). `MARKDOWN_VERSION` |
 | `src/lib/rank.ts` | The front page formula (ADR 0004) |
@@ -51,6 +53,7 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 | `src/views/` | Hono JSX: `components/` (Layout, Items, Comments, Forms, Mark, Time, WhosHere: the front page's newest branches of the invite tree) and `pages/` |
 | `src/styles/` | `tokens.css` (from hekafactory.com, plus additions), `base.css`, `app.css` |
 | `public/` | Favicon, touch icon, `og.png` (`sh scripts/render-assets.sh` re-renders it) |
+| `docs/talk-agent.md`, `docs/talk-knowledge-base.md` | The ElevenLabs agent's settings, prompt and data collection, and its knowledge base. Copied into the dashboard after a change merges |
 | `scripts/` | `seed.ts` and `seed-data.ts`, `smoke.ts`, `lighthouse.ts`, `serve-seeded.ts`, `screenshots.sh` |
 | `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes, auth (OAuth, sessions, CSRF, invites, dev sign-in), members (posting, edits, votes, flags, limits), moderation, the invite tree in the bar and on the front page |
 | `Dockerfile`, `deploy/prod/compose.yaml`, `.woodpecker/` | The image, the production stack, CI and CD |
@@ -115,7 +118,11 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   tokens or private URLs anywhere, except the registry and vault addresses and the stack path in
   `.woodpecker/` and `deploy/`. No secrets, ever: the CI secrets (`discord_webhook`,
   `heka_vault_token`) live in Woodpecker, and the site's own (`SESSION_SECRET`,
-  `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) in Heka Vault, fetched at deploy time (ADR 0007).
+  `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ELEVENLABS_API_KEY`, `ELEVENLABS_WEBHOOK_SECRET`,
+  `DISCORD_TALK_WEBHOOK`) in Heka Vault, fetched at deploy time (ADRs 0007, 0008).
+- **"Talk to us" never hands out the key.** `/api/talk/token` returns a conversation token, only to
+  an origin in `TALK_ALLOWED_ORIGINS`, within the per-visitor and daily limits. Nothing logs a key,
+  a token or a visitor's address (ADR 0008). Change the agent through `docs/talk-agent.md`.
 
 ## Words
 

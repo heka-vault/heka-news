@@ -3,7 +3,8 @@
 # after the image is in the registry, with the stack directory /home/eric/sites/heka-news mounted
 # at the same path and the host's Docker socket. Adapted from heka-site's deploy.sh.
 #
-#   1. Fetch Heka Vault heka-news/prod (SESSION_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) into
+#   1. Fetch Heka Vault heka-news/prod (SESSION_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and
+#      for "Talk to us" ELEVENLABS_API_KEY, ELEVENLABS_WEBHOOK_SECRET, DISCORD_TALK_WEBHOOK) into
 #      vault.env, mode 600, which compose loads (ADR 0007). A vault that refuses or cannot be
 #      reached stops the deploy before the stack is touched; a missing GitHub key does not (the
 #      site then says sign-in opens soon). Values are never printed, only key names.
@@ -91,7 +92,8 @@ if [ -n "${HEKA_VAULT_TOKEN:-}" ]; then
     *) fail "Heka Vault answered HTTP ${code} for ${vault_project}/${vault_env}." ;;
   esac
   echo "Heka Vault ${vault_project}/${vault_env}: $(grep -Ec '^(export )?[A-Za-z_][A-Za-z0-9_]*=' "$vault_tmp" || true) keys"
-  for key in SESSION_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET; do
+  for key in SESSION_SECRET GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET \
+    ELEVENLABS_API_KEY ELEVENLABS_WEBHOOK_SECRET DISCORD_TALK_WEBHOOK; do
     if vault_has "$key"; then echo "  ${key} is set"; else echo "  ${key} is missing"; fi
   done
   if vault_has GITHUB_CLIENT_ID && vault_has GITHUB_CLIENT_SECRET && vault_has SESSION_SECRET; then

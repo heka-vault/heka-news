@@ -42,10 +42,12 @@ import {
   sessionCookie,
   sessionId,
 } from './lib/session.ts'
+import type { Fetch } from './lib/talk.ts'
 import { registerAuth } from './routes/auth.tsx'
 import { registerItems } from './routes/items.tsx'
 import { registerMembers } from './routes/members.tsx'
 import { registerModeration } from './routes/moderation.tsx'
+import { registerTalk } from './routes/talk.ts'
 import type { AppEnv, C, HtmlStatus, Web } from './routes/web.ts'
 import { Csrf } from './views/components/Forms.tsx'
 import { WHOS_HERE_LIMIT, WhosHere } from './views/components/WhosHere.tsx'
@@ -65,6 +67,8 @@ export interface AppOptions {
   clock?: () => number
   /** GitHub's OAuth endpoints; tests pass a fake. Defaults to the real one when configured. */
   github?: GitHubClient | null
+  /** fetch for ElevenLabs and Discord ("Talk to us", ADR 0008); tests pass a fake. */
+  fetch?: Fetch
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -547,6 +551,7 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
   registerItems(app, web)
   registerMembers(app, web)
   registerModeration(app, web)
+  registerTalk(app, web, opts.fetch ?? fetch)
 
   // public/: favicon, touch icon, Open Graph image.
   app.get('/:file', async (c, next) => {

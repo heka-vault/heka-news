@@ -4,8 +4,9 @@
 #
 # Beside it on the host:
 #   .env    TAG, the commit whose image is running, written by the deploy. Nothing secret.
-#   vault.env  SESSION_SECRET, GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET from Heka Vault
-#           heka-news/prod, written by the deploy, mode 600 (ADR 0007). Never edit or copy it.
+#   vault.env  SESSION_SECRET, GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET (ADR 0007), and
+#           ELEVENLABS_API_KEY, ELEVENLABS_WEBHOOK_SECRET and DISCORD_TALK_WEBHOOK (ADR 0008), from
+#           Heka Vault heka-news/prod, written by the deploy, mode 600. Never edit or copy it.
 #   data/   the database (heka-news.db and its -wal and -shm files). Owned by uid 1000, the image's
 #           `bun` user; the deploy creates it. Back it up; never delete it.
 #
@@ -33,6 +34,11 @@ services:
       # GitHub logins of the moderators, comma-separated (ADR 0003). They sign in without an
       # invitation and start the invite tree.
       MODERATORS: detroitpro
+      # "Talk to us" on hekafactory.com (ADR 0008). The key, webhook secret and Discord webhook
+      # come from vault.env; tokens stay off until the key is there.
+      ELEVENLABS_AGENT_ID: agent_6501m58w5sgpf7p970w3vgxrk852
+      TALK_ALLOWED_ORIGINS: https://hekafactory.com
+      TALK_DAILY_LIMIT: '10'
     volumes:
       - ./data:/data
     # The Cloudflare tunnel forwards news.hekafactory.com here.

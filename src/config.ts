@@ -48,6 +48,18 @@ export const RATE_LIMITS = {
 
 export type RateAction = keyof typeof RATE_LIMITS
 
+/** "Talk to us" on hekafactory.com (ADR 0008). Times in seconds unless named otherwise. */
+export const TALK = {
+  /** Conversation tokens one visitor (by IP) may take per hour. */
+  perVisitorHour: 3,
+  /** How long to wait for ElevenLabs before answering 502. */
+  upstreamTimeoutMs: 8000,
+  /** A webhook signed further in the past than this is refused (the SDK's own tolerance). */
+  signatureTolerance: 30 * 60,
+  /** The largest webhook body we read. Transcripts with tool calls run to tens of KB. */
+  webhookMaxBytes: 2 * 1024 * 1024,
+} as const
+
 export interface Config {
   host: string
   port: number
@@ -77,6 +89,23 @@ export interface Config {
   devSignIn: boolean
   /** Cookies carry Secure when PUBLIC_URL is https. */
   secureCookies: boolean
+  /** "Talk to us" (ADR 0008). Each part is off until its values are in the environment. */
+  talk: TalkConfig
+}
+
+export interface TalkConfig {
+  /** ELEVENLABS_API_KEY; never sent to a browser or written to a log. */
+  apiKey: string
+  /** ELEVENLABS_AGENT_ID: the one agent tokens are made for and webhooks are read from. */
+  agentId: string
+  /** ELEVENLABS_WEBHOOK_SECRET: verifies the post-call webhook's signature. */
+  webhookSecret: string
+  /** DISCORD_TALK_WEBHOOK: the private channel conversation summaries go to. */
+  discordWebhook: string
+  /** TALK_ALLOWED_ORIGINS: the sites whose pages may ask for a token. */
+  allowedOrigins: string[]
+  /** TALK_DAILY_LIMIT: conversation tokens issued per UTC day, across all visitors. */
+  dailyLimit: number
 }
 
 /** True for a login in MODERATORS: a founding moderator, who cannot be removed from the site. */
@@ -110,7 +139,24 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     sessionSecret: secret || randomSecret(),
     devSignIn: !production && clientId === '',
     secureCookies: publicUrl.startsWith('https:'),
+    talk: {
+      apiKey: env.ELEVENLABS_API_KEY?.trim() ?? '',
+      agentId: env.ELEVENLABS_AGENT_ID?.trim() ?? '',
+      webhookSecret: env.ELEVENLABS_WEBHOOK_SECRET?.trim() ?? '',
+      discordWebhook: env.DISCORD_TALK_WEBHOOK?.trim() ?? '',
+      allowedOrigins: (env.TALK_ALLOWED_ORIGINS ?? 'https://hekafactory.com')
+        .split(',')
+        .map((o) => o.trim().replace(/\/+$/, ''))
+        .filter(Boolean),
+      dailyLimit: count(env.TALK_DAILY_LIMIT, 10),
+    },
   }
+}
+
+/** A non-negative whole number from the environment, or the fallback when unset or not a number. */
+function count(raw: string | undefined, fallback: number): number {
+  const n = Number(raw ?? fallback)
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback
 }
 
 function randomSecret(): string {

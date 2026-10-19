@@ -11,6 +11,7 @@ import { buildAssets } from '../src/lib/assets.ts'
 import { randomToken } from '../src/lib/crypto.ts'
 import type { GitHubClient, GitHubProfile } from '../src/lib/oauth.ts'
 import { csrfToken, sessionId } from '../src/lib/session.ts'
+import type { Fetch } from '../src/lib/talk.ts'
 
 export const NOW = 1_792_000_000 // 2026-10-15
 export const ORIGIN = 'https://news.example.test'
@@ -33,7 +34,12 @@ export interface AppFixture {
  * (NODE_ENV=production, no GitHub); pass env and a fake GitHub client to open it.
  */
 export function makeApp(
-  opts: { seed?: boolean; env?: Record<string, string>; github?: GitHubClient | null } = {},
+  opts: {
+    seed?: boolean
+    env?: Record<string, string>
+    github?: GitHubClient | null
+    fetch?: Fetch
+  } = {},
 ): AppFixture {
   const db: Db = openDb(':memory:')
   if (opts.seed !== false) seedDatabase(db, NOW)
@@ -45,7 +51,15 @@ export function makeApp(
     ...opts.env,
   })
   let now = NOW
-  const app = createApp({ db, config, assets, clock: () => now, github: opts.github ?? null })
+  const app = createApp({
+    db,
+    config,
+    assets,
+    clock: () => now,
+    github: opts.github ?? null,
+    // Nothing in a test reaches the network: an unexpected request fails loudly.
+    fetch: opts.fetch ?? (async (input) => Promise.reject(new Error(`unexpected fetch ${input}`))),
+  })
   const get = (path: string, headers: Record<string, string> = {}) => app.request(path, { headers })
   return {
     db,
