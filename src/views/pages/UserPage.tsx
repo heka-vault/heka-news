@@ -179,6 +179,21 @@ export function UserPage(props: {
                 </a>
               </dd>
             </div>
+            {user.discord && (
+              <div>
+                <dt>Discord</dt>
+                <dd>
+                  <a
+                    href={`https://discord.com/users/${user.discord.discordId}`}
+                    rel="me noopener"
+                    translate="no"
+                    dir="auto"
+                  >
+                    {user.discord.username}
+                  </a>
+                </dd>
+              </div>
+            )}
             <div>
               <dt>Invited by</dt>
               <dd>

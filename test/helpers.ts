@@ -9,6 +9,7 @@ import { createSession } from '../src/db/sessions.ts'
 import { accountByLogin } from '../src/db/users.ts'
 import { buildAssets } from '../src/lib/assets.ts'
 import { randomToken } from '../src/lib/crypto.ts'
+import type { DiscordOAuthClient, DiscordUser } from '../src/lib/discord.ts'
 import type { GitHubClient, GitHubProfile } from '../src/lib/oauth.ts'
 import { csrfToken, sessionId } from '../src/lib/session.ts'
 import type { Fetch } from '../src/lib/talk.ts'
@@ -39,6 +40,7 @@ export function makeApp(
     env?: Record<string, string>
     github?: GitHubClient | null
     fetch?: Fetch
+    discord?: DiscordOAuthClient | null
   } = {},
 ): AppFixture {
   const db: Db = openDb(':memory:')
@@ -57,6 +59,7 @@ export function makeApp(
     assets,
     clock: () => now,
     github: opts.github ?? null,
+    discord: opts.discord ?? null,
     // Nothing in a test reaches the network: an unexpected request fails loudly.
     fetch: opts.fetch ?? (async (input) => Promise.reject(new Error(`unexpected fetch ${input}`))),
   })
@@ -135,6 +138,25 @@ export function fakeGitHub(profile: GitHubProfile | (() => GitHubProfile)) {
       return `token-for-${code}`
     },
     profile: async () => (typeof profile === 'function' ? profile() : profile),
+    revoke: async (token) => {
+      calls.revoked.push(token)
+    },
+  }
+  return { client, calls }
+}
+
+/** A Discord that answers with this user, and records what it was asked. */
+export function fakeDiscord(user: DiscordUser | (() => DiscordUser)) {
+  const calls = { exchanges: [] as string[], revoked: [] as string[] }
+  const client: DiscordOAuthClient = {
+    authorizeUrl: ({ redirectUri, state }) =>
+      `https://discord.test/oauth2/authorize?redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`,
+    exchange: async ({ code }) => {
+      calls.exchanges.push(code)
+      if (code === 'bad') throw new Error('invalid_grant')
+      return `token-for-${code}`
+    },
+    user: async () => (typeof user === 'function' ? user() : user),
     revoke: async (token) => {
       calls.revoked.push(token)
     },

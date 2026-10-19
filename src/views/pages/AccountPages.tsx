@@ -1,7 +1,7 @@
 // Signing in, invitations and settings (ADR 0003, 0007).
 
 import { RULES } from '../../config.ts'
-import type { InviteRow } from '../../db/types.ts'
+import type { DiscordLink, InviteRow } from '../../db/types.ts'
 import { isoTime, longDate, plural } from '../../lib/format.ts'
 import { type Errors, LIMITS } from '../../lib/validate.ts'
 import {
@@ -335,6 +335,70 @@ export interface SettingsForm {
   previewHtml?: string | null
 }
 
+/** What just happened to the member's Discord link, from ?discord= after a redirect. */
+export type DiscordNotice = 'linked' | 'unlinked' | 'cancelled'
+
+const DISCORD_NOTICE_TEXT: Record<DiscordNotice, string> = {
+  linked: 'Discord is connected.',
+  unlinked: 'Discord is disconnected. What you write on Discord now stays there.',
+  cancelled: 'Nothing changed: Discord was not connected.',
+}
+
+/**
+ * Connecting a Discord account (ADR 0009). Shown once the Discord app is configured, or while a
+ * link exists, so a member can always disconnect.
+ */
+function DiscordSection(props: {
+  ctx: PageContext
+  link: DiscordLink | null
+  notice: DiscordNotice | null
+}) {
+  const { link, notice } = props
+  return (
+    <section aria-labelledby="discord-heading">
+      <h2 id="discord-heading" class="section-title">
+        Discord
+      </h2>
+      {notice && (
+        <p class="notice" role="status">
+          {DISCORD_NOTICE_TEXT[notice]}
+        </p>
+      )}
+      {link ? (
+        <>
+          <p class="section-intro">
+            Connected as{' '}
+            <strong translate="no" dir="auto">
+              {link.username}
+            </strong>
+            . Your replies in the #heka-news-threads forum are published here under your login,
+            marked “via Discord”, and your Discord username shows on your profile.
+          </p>
+          <form method="post" action="/settings/discord/unlink">
+            <Csrf ctx={props.ctx} />
+            <button class="button button--quiet" type="submit">
+              Disconnect Discord
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <p class="section-intro">
+            Connect your Discord account to reply to items from the #heka-news-threads forum. Your
+            replies there are published here under your login, marked “via Discord”. We keep only
+            your Discord user ID and username, and you can disconnect at any time.
+          </p>
+          <p>
+            <a class="button" href="/auth/discord">
+              Connect Discord
+            </a>
+          </p>
+        </>
+      )}
+    </section>
+  )
+}
+
 export function SettingsPage(props: {
   ctx: PageContext
   login: string
@@ -343,6 +407,8 @@ export function SettingsPage(props: {
   /** Set right after an invitation is made: the one time its link can be shown. */
   newInvite?: { url: string; note: string; expiresAt: number }
   saved?: boolean
+  /** Whether Discord linking is configured, the member's link, and what just happened to it. */
+  discord: { available: boolean; link: DiscordLink | null; notice: DiscordNotice | null }
 }) {
   const { ctx, form, invites } = props
   const profileErrors = { ...form.errors }
@@ -445,6 +511,10 @@ export function SettingsPage(props: {
             <FormActions label="Save profile" sending="Saving…" preview />
           </form>
         </section>
+
+        {(props.discord.available || props.discord.link) && (
+          <DiscordSection ctx={ctx} link={props.discord.link} notice={props.discord.notice} />
+        )}
 
         <section aria-labelledby="invites-heading">
           <h2 id="invites-heading" class="section-title">

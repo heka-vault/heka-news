@@ -4,9 +4,10 @@
 #
 # Beside it on the host:
 #   .env    TAG, the commit whose image is running, written by the deploy. Nothing secret.
-#   vault.env  SESSION_SECRET, GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET (ADR 0007), and
-#           ELEVENLABS_API_KEY, ELEVENLABS_WEBHOOK_SECRET and DISCORD_TALK_WEBHOOK (ADR 0008), from
-#           Heka Vault heka-news/prod, written by the deploy, mode 600. Never edit or copy it.
+#   vault.env  SESSION_SECRET, GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET (ADR 0007),
+#           ELEVENLABS_API_KEY, ELEVENLABS_WEBHOOK_SECRET and DISCORD_TALK_WEBHOOK (ADR 0008), and
+#           DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET (ADR 0009), from Heka Vault heka-news/prod,
+#           written by the deploy, mode 600. Never edit or copy it.
 #   data/   the database (heka-news.db and its -wal and -shm files). Owned by uid 1000, the image's
 #           `bun` user; the deploy creates it. Back it up; never delete it.
 #
