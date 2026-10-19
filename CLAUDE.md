@@ -109,8 +109,10 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
 - **Accessible by default.** One `<h1>` per page, visible focus, WCAG AA contrast in light and
   dark (ratios at the top of `tokens.css`), 24px targets for links in rows, `dir="auto"` on
   anything a member wrote, nothing that moves under `prefers-reduced-motion`. Check 360px wide.
-- **Light and dark are both first-class.** The site follows `prefers-color-scheme`; there is no
-  toggle.
+- **Light and dark are both first-class.** The site follows `prefers-color-scheme` (each token is
+  `light-dark(light, dark)`). The sun/moon button in the bar overrides it with the `heka-theme`
+  cookie on hekafactory.com, shared with hekafactory.com; the server renders `data-theme` from it,
+  so there is no flash and no inline script. Choosing what the system shows clears the cookie.
 - **Seed data is for development only.** `scripts/` is not in the Docker image, and `seed.ts`
   refuses `NODE_ENV=production`. Production starts empty; the empty states are designed. Seed
   handles are fictional; never put a real person in the seed.

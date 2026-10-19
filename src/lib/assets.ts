@@ -33,7 +33,7 @@ const FONTS: Record<string, string[]> = {
 const PRELOAD = ['archivo-latin-wdth-normal.woff2', 'source-serif-4-latin-wght-normal.woff2']
 
 /** The client modules in src/client/, by file name without .ts. */
-export const SCRIPTS = ['time', 'vote', 'forms', 'reply', 'copy'] as const
+export const SCRIPTS = ['time', 'vote', 'forms', 'reply', 'copy', 'theme'] as const
 export type ScriptName = (typeof SCRIPTS)[number]
 
 export interface Assets {

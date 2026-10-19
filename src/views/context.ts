@@ -26,8 +26,22 @@ export interface PageContext {
   signedIn: boolean
   viewer: Viewer | null
   signin: SigninMode
+  /** A theme the visitor chose with the toggle (the heka-theme cookie); null follows the system. */
+  theme: Theme | null
   /** Items and comments on this page the viewer has voted on. */
   votes: { items: Set<number>; comments: Set<number> }
+}
+
+export type Theme = 'light' | 'dark'
+
+/**
+ * The visitor's chosen theme. The cookie is set on hekafactory.com by either site's toggle
+ * (src/client/theme.ts here, the header on hekafactory.com), so one choice covers both.
+ */
+export const THEME_COOKIE = 'heka-theme'
+
+export function themeOf(value: string | null): Theme | null {
+  return value === 'light' || value === 'dark' ? value : null
 }
 
 export type NavKey = 'top' | 'new' | 'posts' | 'status' | 'tree' | 'replies' | 'mod' | null
