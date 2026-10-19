@@ -59,7 +59,7 @@ main:has(> .discussion:last-child) {
 
 .wordmark {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.5rem;
   color: inherit;
   text-decoration: none;
@@ -71,6 +71,17 @@ main:has(> .discussion:last-child) {
   line-height: 1;
   white-space: nowrap;
   padding-block: var(--space-2);
+}
+
+/* The mark set to the type, beside "heka news" in the bar and the footer: the tall bar as tall as
+ * the h and k (0.71em in Archivo; the bar is 26/32 of the box, so the box is 0.874em). In a
+ * baseline-aligned row the box's bottom sits on the baseline; moving it down by its 3/32 bottom
+ * padding stands the bars on the baseline, as the letters do. Same rule as hekafactory.com. */
+.wordmark svg,
+.site-footer__name svg {
+  width: 0.874em;
+  height: 0.874em;
+  translate: 0 0.082em;
 }
 
 .bar__nav ul {
@@ -1257,7 +1268,7 @@ main:has(> .discussion:last-child) {
 
 .site-footer__name {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.45rem;
   color: var(--ink);
   font-stretch: var(--stretch-display);
