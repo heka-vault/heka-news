@@ -27,7 +27,7 @@ import { listModLog } from './db/modlog.ts'
 import { getSession, touchSession } from './db/sessions.ts'
 import { getTag, listTags } from './db/tags.ts'
 import type { ItemKind, ItemSummary } from './db/types.ts'
-import { getProfile, inviteTree, listUsersForSitemap, treeSummary } from './db/users.ts'
+import { findBranch, getProfile, inviteTree, listUsersForSitemap, treeSummary } from './db/users.ts'
 import { votedComments, votedItems } from './db/votes.ts'
 import { type Assets, buildAssets } from './lib/assets.ts'
 import { robotsTxt, rssFeed, sitemap } from './lib/feeds.ts'
@@ -54,7 +54,7 @@ import { ItemPage } from './views/pages/ItemPage.tsx'
 import { ListPage } from './views/pages/ListPage.tsx'
 import { ModerationPage } from './views/pages/ModerationPage.tsx'
 import { AboutPage, ErrorPage, MessagePage } from './views/pages/TextPages.tsx'
-import { TreePage } from './views/pages/TreePage.tsx'
+import { BranchPage, TreePage } from './views/pages/TreePage.tsx'
 import { UserPage } from './views/pages/UserPage.tsx'
 
 export interface AppOptions {
@@ -514,6 +514,16 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
   })
 
   app.get('/tree', (c) => html(c, <TreePage ctx={ctxOf(c)} roots={inviteTree(db)} />))
+
+  // One member as their own root: the line above them and the branch below (ADR 0003).
+  app.get('/tree/:login', (c) => {
+    const user = getProfile(db, c.req.param('login'))
+    if (!user) return notFound(c)
+    if (c.req.param('login') !== user.login) return c.redirect(`/tree/${user.login}`, 301)
+    const branch = findBranch(inviteTree(db), user.login)
+    if (!branch) return notFound(c)
+    return html(c, <BranchPage ctx={ctxOf(c)} line={branch.line} node={branch.node} />)
+  })
 
   app.get('/moderation', (c) => {
     const page = pageParam(c)

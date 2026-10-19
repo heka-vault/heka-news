@@ -2,7 +2,7 @@
 // page's "Who's here" panel, in every state from an empty site to a crowd joining in one morning.
 
 import { describe, expect, test } from 'bun:test'
-import { accountByLogin, treeSummary } from '../src/db/users.ts'
+import { accountByLogin, findBranch, inviteTree, treeSummary } from '../src/db/users.ts'
 import { createUser } from '../src/db/write.ts'
 import { branches } from '../src/views/components/WhosHere.tsx'
 import { makeApp, NOW, signIn } from './helpers.ts'
@@ -172,5 +172,88 @@ describe('the tree in brief', () => {
       ['y', ['b']],
       [null, ['d']],
     ])
+  })
+})
+
+describe('a member as their own root', () => {
+  const fx = makeApp()
+
+  test('shows the line above them and everyone who joined through them', async () => {
+    // pressbrake (founding) → gantry → spindle → bollard.
+    const res = await fx.get('/tree/spindle')
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('<h1><span translate="no">spindle</span>’s branch</h1>')
+    expect(html).toContain('1 person traces back to them.')
+    const line = html.match(/<ol class="tree-line__list">[\s\S]*?<\/ol>/)?.[0] ?? ''
+    expect(line.indexOf('href="/tree/pressbrake"')).toBeGreaterThan(0)
+    expect(line.indexOf('href="/tree/gantry"')).toBeGreaterThan(line.indexOf('/tree/pressbrake'))
+    expect(line).toContain('<li aria-current="page"><span translate="no">spindle</span></li>')
+    // Below: spindle at the root, bollard under them, and nobody from other branches.
+    const below = html.slice(html.indexOf('<ul class="tree">'))
+    expect(below.indexOf('href="/u/spindle"')).toBeLessThan(below.indexOf('href="/u/bollard"'))
+    expect(below).not.toContain('href="/u/gantry"')
+    expect(below).not.toContain('href="/u/quietfox"')
+    expect(html).toContain('<link rel="canonical" href="http')
+    expect(html).toMatch(/<link rel="canonical" href="[^"]+\/tree\/spindle"/)
+    expect(html).toContain('<a href="/tree">See the whole invite tree</a>')
+  })
+
+  test('counts the whole branch, not just the people they invited themselves', async () => {
+    // quietfox invited tinplate and aleksandra; tinplate invited jo.
+    const html = await (await fx.get('/tree/quietfox')).text()
+    expect(html).toContain('3 people trace back to them.')
+  })
+
+  test('a founding member is at the top, with no line', async () => {
+    const html = await (await fx.get('/tree/pressbrake')).text()
+    expect(html).toContain('Founding member</h2>')
+    expect(html).toContain('At the top of the tree. Nobody invited them.')
+    expect(html).not.toContain('<ol class="tree-line__list"')
+  })
+
+  test('speaks to the member when it is their own branch', async () => {
+    const html = await (await signIn(fx, 'sapling').get('/tree/sapling')).text()
+    expect(html).toContain('<h1>Your branch</h1>')
+    expect(html).toContain(
+      'Nobody has joined through you yet. <a href="/settings#invites-heading">Invite someone</a>.',
+    )
+  })
+
+  test('is publicly cacheable when signed out, like the whole tree', async () => {
+    const res = await fx.get('/tree/spindle')
+    expect(res.headers.get('Cache-Control')).toBe(
+      'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+    )
+    expect((await signIn(fx, 'quietfox').get('/tree/spindle')).headers.get('Cache-Control')).toBe(
+      'private, no-store',
+    )
+  })
+
+  test('redirects to the login as stored, and 404s for nobody', async () => {
+    const res = await fx.get('/tree/SPINDLE')
+    expect(res.status).toBe(301)
+    expect(res.headers.get('Location')).toBe('/tree/spindle')
+    expect((await fx.get('/tree/nobody-here')).status).toBe(404)
+  })
+
+  test('every profile links to the branch', async () => {
+    const theirs = await (await fx.get('/u/spindle')).text()
+    expect(theirs).toContain(
+      '<dt>Invite tree</dt><dd><a href="/tree/spindle">Their branch</a></dd>',
+    )
+    const own = await (await signIn(fx, 'spindle').get('/u/spindle')).text()
+    expect(own).toContain('<a href="/tree/spindle">Your branch</a>')
+  })
+
+  test('the line is found anywhere in the forest', () => {
+    const roots = inviteTree(fx.db)
+    expect(findBranch(roots, 'bollard')?.line.map((n) => n.login)).toEqual([
+      'pressbrake',
+      'gantry',
+      'spindle',
+    ])
+    expect(findBranch(roots, 'tallyhall')?.line).toEqual([])
+    expect(findBranch(roots, 'nobody')).toBeNull()
   })
 })

@@ -17,6 +17,7 @@ const checks: [path: string, status: number, marker: string][] = [
   ['/t/harness', 200, 'Tagged harness'],
   ['/u/ledgerline', 200, 'ProfilePage'],
   ['/tree', 200, 'class="tree"'],
+  ['/tree/spindle', 200, 'tree-line__list'],
   ['/moderation', 200, 'class="modlog"'],
   ['/about', 200, 'How membership works'],
   ['/signin', 200, '<h1>Sign in</h1>'],

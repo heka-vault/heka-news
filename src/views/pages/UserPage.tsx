@@ -172,6 +172,14 @@ export function UserPage(props: {
               <dd>{longDate(user.createdAt)}</dd>
             </div>
             <div>
+              <dt>GitHub</dt>
+              <dd>
+                <a href={`https://github.com/${user.login}`} rel="me noopener" translate="no">
+                  github.com/{user.login}
+                </a>
+              </dd>
+            </div>
+            <div>
               <dt>Invited by</dt>
               <dd>
                 {user.invitedBy ? (
@@ -192,6 +200,12 @@ export function UserPage(props: {
                         <a href={`/u/${u.login}`}>{u.login}</a>
                       </>
                     ))}
+              </dd>
+            </div>
+            <div>
+              <dt>Invite tree</dt>
+              <dd>
+                <a href={`/tree/${user.login}`}>{self ? 'Your branch' : 'Their branch'}</a>
               </dd>
             </div>
             <div>

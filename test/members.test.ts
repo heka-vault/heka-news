@@ -497,3 +497,15 @@ describe('signed-in pages', () => {
     expect(await res.text()).toContain('X-CSRF-Token')
   })
 })
+
+describe('a profile links to GitHub', () => {
+  const fx = makeApp()
+
+  test('as a fact and in the structured data', async () => {
+    const html = await (await fx.get('/u/spindle')).text()
+    expect(html).toContain(
+      '<dt>GitHub</dt><dd><a href="https://github.com/spindle" rel="me noopener" translate="no">github.com/spindle</a></dd>',
+    )
+    expect(html).toContain('"sameAs":["https://github.com/spindle"]')
+  })
+})
