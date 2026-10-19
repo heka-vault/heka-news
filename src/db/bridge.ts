@@ -111,6 +111,11 @@ export function saveThread(db: Db, itemId: number, threadId: string, now: number
   ).run(itemId, threadId, now, now)
 }
 
+/** Drop an item's thread (deleted on Discord), so the next comment opens a new one. */
+export function forgetThread(db: Db, itemId: number): void {
+  db.query('DELETE FROM discord_threads WHERE item_id = ?').run(itemId)
+}
+
 export interface MessageRef {
   messageId: string
   commentId: number

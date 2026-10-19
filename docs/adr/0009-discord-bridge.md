@@ -35,7 +35,9 @@ member's login.
 does the outbound half itself (`src/lib/outbox.ts`), with no gateway connection:
 
 - A new item (link, post or status) opens a forum post: the title, the domain or an excerpt, who
-  posted it, its tags, and a link here. Items from before the bridge get no thread.
+  posted it, its tags, and a link here. An item from before the bridge, or whose thread was
+  deleted on Discord (Unknown Channel), gets its thread when the first new comment arrives; the
+  comments before that stay on the site. Old items are never posted in bulk.
 - A comment made here is posted into the item's thread under the member's login and avatar, with
   the first line of the parent quoted when it is a reply, cut at 2,000 characters with a link to
   the rest.
@@ -89,7 +91,7 @@ Votes, reactions and tags are not synced.
   it, and missing a few minutes of Discord costs nothing.
 - New secrets in Heka Vault: `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` (linking),
   `DISCORD_FORUM_WEBHOOK` and `DISCORD_BOT_TOKEN` (outbound) and `DISCORD_BRIDGE_TOKEN` (inbound).
-  Each part stays off until its values are set. Items posted before the webhook is set never get a
-  thread.
+  Each part stays off until its values are set. Items posted before the webhook was set get a
+  thread only once someone comments on them.
 - Members' words written on Discord are published here. The settings page says so before anyone
   connects.
