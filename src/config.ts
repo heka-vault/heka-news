@@ -91,6 +91,11 @@ export interface Config {
   secureCookies: boolean
   /** "Talk to us" (ADR 0008). Each part is off until its values are in the environment. */
   talk: TalkConfig
+  /**
+   * The Discord application's OAuth credentials, for members linking their Discord account
+   * (ADR 0009); null until both are set, and in production until SESSION_SECRET is too.
+   */
+  discord: { clientId: string; clientSecret: string } | null
 }
 
 export interface TalkConfig {
@@ -123,6 +128,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const clientSecret = env.GITHUB_CLIENT_SECRET?.trim() ?? ''
   // In production, GitHub sign-in needs all three values; anything missing keeps it closed.
   const githubReady = clientId !== '' && clientSecret !== '' && (secret !== '' || !production)
+  const discordId = env.DISCORD_CLIENT_ID?.trim() ?? ''
+  const discordSecret = env.DISCORD_CLIENT_SECRET?.trim() ?? ''
+  const discordReady = discordId !== '' && discordSecret !== '' && (secret !== '' || !production)
   return {
     host,
     port,
@@ -150,6 +158,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
         .filter(Boolean),
       dailyLimit: count(env.TALK_DAILY_LIMIT, 10),
     },
+    discord: discordReady ? { clientId: discordId, clientSecret: discordSecret } : null,
   }
 }
 

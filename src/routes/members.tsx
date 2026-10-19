@@ -3,6 +3,7 @@
 
 import { PAGE_SIZE, RULES } from '../config.ts'
 import { listRepliesTo } from '../db/comments.ts'
+import { discordLinkFor } from '../db/discord.ts'
 import { createInvite, getInvite, listInvitesBy, revokeInvite } from '../db/invites.ts'
 import { profileSettings } from '../db/users.ts'
 import { updateProfile } from '../db/write.ts'
@@ -10,9 +11,15 @@ import { randomToken, sha256Hex } from '../lib/crypto.ts'
 import { CACHE_NONE } from '../lib/http.ts'
 import { renderMarkdown } from '../lib/markdown.ts'
 import { field, validateInviteNote, validateProfile } from '../lib/validate.ts'
-import { type SettingsForm, SettingsPage } from '../views/pages/AccountPages.tsx'
+import {
+  type DiscordNotice,
+  type SettingsForm,
+  SettingsPage,
+} from '../views/pages/AccountPages.tsx'
 import { RepliesPage } from '../views/pages/MemberPages.tsx'
 import { type App, type C, guardPost, idParam, signinRedirect, type Web } from './web.ts'
+
+const DISCORD_NOTICES: DiscordNotice[] = ['linked', 'unlinked', 'cancelled']
 
 export function registerMembers(app: App, web: Web): void {
   const { db, config, clock } = web
@@ -43,7 +50,11 @@ export function registerMembers(app: App, web: Web): void {
   const settings = (
     c: C,
     form: Partial<SettingsForm>,
-    extra: { newInvite?: { url: string; note: string; expiresAt: number }; saved?: boolean } = {},
+    extra: {
+      newInvite?: { url: string; note: string; expiresAt: number }
+      saved?: boolean
+      discord?: DiscordNotice
+    } = {},
     status: 200 | 201 | 422 = 200,
   ) => {
     const ctx = web.ctxOf(c)
@@ -65,6 +76,11 @@ export function registerMembers(app: App, web: Web): void {
         invites={listInvitesBy(db, viewer.id, clock())}
         newInvite={extra.newInvite}
         saved={extra.saved}
+        discord={{
+          available: web.discord !== null,
+          link: discordLinkFor(db, viewer.id),
+          notice: extra.discord ?? null,
+        }}
       />,
       status === 201 ? 200 : status,
     )
@@ -72,7 +88,15 @@ export function registerMembers(app: App, web: Web): void {
 
   app.get('/settings', (c) => {
     c.header('Cache-Control', CACHE_NONE)
-    return settings(c, {}, { saved: c.req.query('saved') === '1' })
+    const notice = c.req.query('discord')
+    return settings(
+      c,
+      {},
+      {
+        saved: c.req.query('saved') === '1',
+        discord: DISCORD_NOTICES.find((n) => n === notice),
+      },
+    )
   })
 
   app.post('/settings/profile', async (c) => {

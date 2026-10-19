@@ -232,7 +232,7 @@ describe('migration 0004', () => {
   test('adds the talk tables', () => {
     const db = new Database(':memory:', { strict: true })
     migrate(db, { before: '0004' })
-    expect(migrate(db)).toEqual(['0004_talk'])
+    expect(migrate(db, { before: '0005' })).toEqual(['0004_talk'])
     const tables = db
       .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table'")
       .all()
@@ -240,5 +240,18 @@ describe('migration 0004', () => {
     for (const table of ['talk_visitors', 'talk_days', 'talk_conversations']) {
       expect(tables).toContain(table)
     }
+  })
+})
+
+describe('migration 0005', () => {
+  test('adds discord_links, one row per member and per Discord account', () => {
+    const db = new Database(':memory:', { strict: true })
+    migrate(db, { before: '0005' })
+    expect(migrate(db, { before: '0006' })).toEqual(['0005_discord_links'])
+    const columns = db
+      .query<{ name: string }, []>("SELECT name FROM pragma_table_info('discord_links')")
+      .all()
+      .map((row) => row.name)
+    expect(columns).toEqual(['user_id', 'discord_id', 'username', 'linked_at'])
   })
 })

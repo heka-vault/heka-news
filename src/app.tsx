@@ -30,6 +30,7 @@ import type { ItemKind, ItemSummary } from './db/types.ts'
 import { findBranch, getProfile, inviteTree, listUsersForSitemap, treeSummary } from './db/users.ts'
 import { votedComments, votedItems } from './db/votes.ts'
 import { type Assets, buildAssets } from './lib/assets.ts'
+import { type DiscordOAuthClient, discordOAuthClient } from './lib/discord.ts'
 import { robotsTxt, rssFeed, sitemap } from './lib/feeds.ts'
 import { CACHE_IMMUTABLE, CACHE_NONE, CACHE_STATIC, finishResponse } from './lib/http.ts'
 import { websiteJsonLd } from './lib/jsonld.ts'
@@ -44,6 +45,7 @@ import {
 } from './lib/session.ts'
 import type { Fetch } from './lib/talk.ts'
 import { registerAuth } from './routes/auth.tsx'
+import { registerDiscord } from './routes/discord.tsx'
 import { registerItems } from './routes/items.tsx'
 import { registerMembers } from './routes/members.tsx'
 import { registerModeration } from './routes/moderation.tsx'
@@ -75,6 +77,8 @@ export interface AppOptions {
   github?: GitHubClient | null
   /** fetch for ElevenLabs and Discord ("Talk to us", ADR 0008); tests pass a fake. */
   fetch?: Fetch
+  /** Discord's OAuth endpoints, for linking (ADR 0009); tests pass a fake. */
+  discord?: DiscordOAuthClient | null
 }
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -103,6 +107,12 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
   const github =
     opts.github !== undefined ? opts.github : config.github ? githubClient(config.github) : null
   const signin: SigninMode = github ? 'github' : config.devSignIn ? 'dev' : 'closed'
+  const discord =
+    opts.discord !== undefined
+      ? opts.discord
+      : config.discord
+        ? discordOAuthClient(config.discord)
+        : null
   const origin = config.publicUrl
   const app = new Hono<AppEnv>()
 
@@ -154,7 +164,19 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
       status,
     )
 
-  const web: Web = { db, config, assets, clock, github, signin, ctxOf, html, notFound, refuse }
+  const web: Web = {
+    db,
+    config,
+    assets,
+    clock,
+    github,
+    discord,
+    signin,
+    ctxOf,
+    html,
+    notFound,
+    refuse,
+  }
 
   // Finish every response: security headers, cache policy, ETag/304, compression.
   app.use('*', async (c, next) => {
@@ -555,6 +577,7 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
   app.get('/about', (c) => html(c, <AboutPage ctx={ctxOf(c)} tags={listTags(db)} />))
 
   registerAuth(app, web)
+  registerDiscord(app, web)
   registerItems(app, web)
   registerMembers(app, web)
   registerModeration(app, web)

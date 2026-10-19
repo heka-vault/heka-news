@@ -1,5 +1,6 @@
 // Reading members: profiles and the invite tree. All user SQL for reads lives here.
 
+import { discordLinkFor } from './discord.ts'
 import type { Db } from './index.ts'
 import type { Member, TreeNode, TreeSummary, UserProfile, UserRef } from './types.ts'
 
@@ -62,6 +63,7 @@ export function getProfile(db: Db, login: string): UserProfile | null {
     invited: invited.map(ref),
     itemCount: counts?.items ?? 0,
     commentCount: counts?.comments ?? 0,
+    discord: discordLinkFor(db, row.id),
   }
 }
 

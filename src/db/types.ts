@@ -148,6 +148,16 @@ export interface UserProfile {
   invited: UserRef[]
   itemCount: number
   commentCount: number
+  /** Their linked Discord account (ADR 0009), shown on the profile. */
+  discord: DiscordLink | null
+}
+
+/** A member's linked Discord account (ADR 0009). */
+export interface DiscordLink {
+  /** Discord's user id (a snowflake, kept as text). */
+  discordId: string
+  username: string
+  linkedAt: number
 }
 
 export interface TreeNode {
