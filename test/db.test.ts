@@ -65,7 +65,7 @@ describe('migration 0003', () => {
     const before = rows()
     expect(before.length).toBeGreaterThan(0)
 
-    expect(migrate(db)).toEqual(['0003_moderator_roles'])
+    expect(migrate(db, { before: '0004' })).toEqual(['0003_moderator_roles'])
     expect(rows()).toEqual(before)
     const indexes = db
       .query<{ name: string }, []>(
@@ -225,5 +225,20 @@ describe('members', () => {
     expect(() => createUser(db, { login: 'has space' })).toThrow()
     expect(() => createUser(db, { login: '../etc' })).toThrow()
     expect(() => createUser(db, { login: 'ok-name', displayName: 'x'.repeat(81) })).toThrow()
+  })
+})
+
+describe('migration 0004', () => {
+  test('adds the talk tables', () => {
+    const db = new Database(':memory:', { strict: true })
+    migrate(db, { before: '0004' })
+    expect(migrate(db)).toEqual(['0004_talk'])
+    const tables = db
+      .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => row.name)
+    for (const table of ['talk_visitors', 'talk_days', 'talk_conversations']) {
+      expect(tables).toContain(table)
+    }
   })
 })
