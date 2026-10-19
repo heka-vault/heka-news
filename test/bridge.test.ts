@@ -34,6 +34,8 @@ function fakeDiscord() {
   const calls: Call[] = []
   let next = 5000
   let failWith: number | null = null
+  /** Threads deleted on Discord: posting into one answers 404 Unknown Channel. */
+  const gone = new Set<string>()
   const fetch = async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input))
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null
@@ -43,13 +45,17 @@ function fakeDiscord() {
       return Response.json({ message: 'nope', retry_after: 7 }, { status: failWith })
     }
     if (init?.method === 'DELETE') return new Response(null, { status: 204 })
-    const id = String(next++)
     const thread = url.searchParams.get('thread_id')
+    if (thread && gone.has(thread)) {
+      return Response.json({ message: 'Unknown Channel', code: 10003 }, { status: 404 })
+    }
+    const id = String(next++)
     return Response.json({ id, channel_id: thread ?? `9${id}` })
   }
   return {
     fetch,
     calls,
+    gone,
     fail(status: number | null) {
       failWith = status
     },
@@ -176,9 +182,44 @@ describe('outbound', () => {
     expect(lock?.body).toEqual({ locked: true, archived: true })
   })
 
-  test('an item from before the bridge gets nothing', async () => {
+  test('the first new comment on an item from before the bridge opens its thread', async () => {
     const { fx, discord } = bridgeApp()
-    await comment(signIn(fx, 'quietfox'), 1, 'On an old item.')
+    const m = signIn(fx, 'quietfox')
+    await comment(m, 1, 'On an old item.')
+    await fx.outbox.drain()
+    const [open, post] = discord.calls
+    expect(open?.url.searchParams.get('thread_id')).toBeNull()
+    expect(open?.body?.content).toContain(`<${ORIGIN}/item/1>`)
+    expect(post?.url.searchParams.get('thread_id')).toBe('95000')
+    expect(post?.body?.content).toBe('On an old item.')
+    expect(threadForItem(fx.db, 1)).toBe('95000')
+    // The next comment goes into the same thread.
+    await comment(m, 1, 'Second.')
+    await fx.outbox.drain()
+    expect(discord.calls.at(-1)?.url.searchParams.get('thread_id')).toBe('95000')
+    expect(discord.calls).toHaveLength(3)
+  })
+
+  test('a thread deleted on Discord is opened again by the next comment', async () => {
+    const { fx, discord } = bridgeApp()
+    const m = signIn(fx, 'quietfox')
+    const item = await postStatus(m)
+    await fx.outbox.drain()
+    discord.gone.add('95000')
+    const c = await comment(m, item, 'Into a new thread.')
+    await fx.outbox.drain()
+    const reopened = threadForItem(fx.db, item)
+    expect(reopened).not.toBe('95000')
+    expect(discord.calls.at(-1)?.url.searchParams.get('thread_id')).toBe(reopened)
+    expect(messageForComment(fx.db, c)?.threadId).toBe(reopened ?? undefined)
+  })
+
+  test('a comment on a deleted item opens nothing', async () => {
+    const { fx, discord } = bridgeApp()
+    const m = signIn(fx, 'quietfox')
+    const item = await postStatus(m)
+    await comment(m, item, 'Too late.')
+    await m.post(`/item/${item}/delete`)
     await fx.outbox.drain()
     expect(discord.calls).toHaveLength(0)
   })

@@ -13,6 +13,7 @@ import {
   enqueue,
   finishOutbox,
   forgetMessage,
+  forgetThread,
   messageForComment,
   type OutboundComment,
   type OutboundItem,
@@ -36,6 +37,8 @@ const MESSAGE_MAX = 2000
 const THREAD_NAME_MAX = 100
 /** After this many failed attempts a row is dropped (and logged). */
 const MAX_ATTEMPTS = 8
+/** Discord's error code for a channel or thread that does not exist (deleted). */
+const UNKNOWN_CHANNEL = 10003
 /** Nobody gets pinged by anything we post. */
 const NO_MENTIONS = { parse: [] as string[] }
 
@@ -77,8 +80,14 @@ export function createOutbox(opts: {
     const detail = (await res.json().catch(() => ({}))) as {
       retry_after?: number
       message?: string
+      code?: number
     }
-    throw new DiscordError(res.status, detail.message ?? res.statusText, detail.retry_after)
+    throw new DiscordError(
+      res.status,
+      detail.message ?? res.statusText,
+      detail.retry_after,
+      detail.code,
+    )
   }
 
   const webhook = (path = '', query: Record<string, string> = {}) => {
@@ -92,18 +101,24 @@ export function createOutbox(opts: {
     await call('PATCH', `${API}/channels/${threadId}`, patch, true)
   }
 
+  /** Open the item's forum post and remember it. Returns the thread's id. */
+  const openThread = async (item: OutboundItem): Promise<string> => {
+    const sent = await call('POST', webhook('', { wait: 'true' }), {
+      thread_name: threadName(item),
+      content: starterContent(item, itemUrl(item.id)),
+      allowed_mentions: NO_MENTIONS,
+    })
+    const threadId = typeof sent?.channel_id === 'string' ? sent.channel_id : null
+    if (!threadId) throw new DiscordError(0, 'the webhook answered without a thread')
+    saveThread(db, item.id, threadId, clock())
+    return threadId
+  }
+
   const handlers: Record<OutboxKind, (row: OutboxRow) => Promise<void>> = {
     async item_created(row) {
       const item = row.itemId === null ? null : outboundItem(db, row.itemId)
       if (!item || item.deleted || threadForItem(db, item.id)) return
-      const sent = await call('POST', webhook('', { wait: 'true' }), {
-        thread_name: threadName(item),
-        content: starterContent(item, itemUrl(item.id)),
-        allowed_mentions: NO_MENTIONS,
-      })
-      const threadId = typeof sent?.channel_id === 'string' ? sent.channel_id : null
-      if (!threadId) throw new DiscordError(0, 'the webhook answered without a thread')
-      saveThread(db, item.id, threadId, clock())
+      await openThread(item)
     },
 
     async item_updated(row) {
@@ -142,14 +157,27 @@ export function createOutbox(opts: {
       const comment = row.commentId === null ? null : outboundComment(db, row.commentId)
       if (!comment || comment.deleted || comment.source !== 'site') return
       if (messageForComment(db, comment.id)) return
-      const threadId = threadForItem(db, comment.itemId)
-      if (!threadId) return
-      const sent = await call('POST', webhook('', { wait: 'true', thread_id: threadId }), {
-        content: commentContent(comment, `${itemUrl(comment.itemId)}#c${comment.id}`),
-        username: webhookName(comment.login),
-        avatar_url: comment.avatarUrl ?? undefined,
-        allowed_mentions: NO_MENTIONS,
-      })
+      const item = outboundItem(db, comment.itemId)
+      if (!item || item.deleted) return
+      const post = (threadId: string) =>
+        call('POST', webhook('', { wait: 'true', thread_id: threadId }), {
+          content: commentContent(comment, `${itemUrl(comment.itemId)}#c${comment.id}`),
+          username: webhookName(comment.login),
+          avatar_url: comment.avatarUrl ?? undefined,
+          allowed_mentions: NO_MENTIONS,
+        })
+      // An item from before the bridge, or whose thread was deleted on Discord, gets its thread
+      // when the first new comment arrives; the comments before it stay on the site.
+      let threadId = threadForItem(db, item.id) ?? (await openThread(item))
+      let sent: Record<string, unknown> | null
+      try {
+        sent = await post(threadId)
+      } catch (error) {
+        if (!(error instanceof DiscordError && error.code === UNKNOWN_CHANNEL)) throw error
+        forgetThread(db, item.id)
+        threadId = await openThread(item)
+        sent = await post(threadId)
+      }
       if (typeof sent?.id !== 'string') throw new DiscordError(0, 'the webhook returned no id')
       saveSiteMessage(db, { messageId: sent.id, commentId: comment.id, threadId }, clock())
     },
@@ -233,6 +261,8 @@ export class DiscordError extends Error {
     readonly status: number,
     message: string,
     readonly retryAfter?: number,
+    /** Discord's JSON error code, e.g. 10003 Unknown Channel. */
+    readonly code?: number,
   ) {
     super(`Discord ${status}: ${message}`)
   }
