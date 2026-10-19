@@ -96,6 +96,17 @@ export interface Config {
    * (ADR 0009); null until both are set, and in production until SESSION_SECRET is too.
    */
   discord: { clientId: string; clientSecret: string } | null
+  /** The Discord bridge (ADR 0009). Each part is off while its value is empty. */
+  bridge: BridgeConfig
+}
+
+export interface BridgeConfig {
+  /** DISCORD_FORUM_WEBHOOK: the forum channel's webhook; new items and comments go out through it. */
+  forumWebhook: string
+  /** DISCORD_BOT_TOKEN: renames, locks and archives a thread (a webhook cannot). */
+  botToken: string
+  /** DISCORD_BRIDGE_TOKEN: what the relay bot sends to /api/discord/events. */
+  inboundToken: string
 }
 
 export interface TalkConfig {
@@ -159,7 +170,20 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       dailyLimit: count(env.TALK_DAILY_LIMIT, 10),
     },
     discord: discordReady ? { clientId: discordId, clientSecret: discordSecret } : null,
+    bridge: {
+      forumWebhook: webhookUrl(env.DISCORD_FORUM_WEBHOOK),
+      botToken: env.DISCORD_BOT_TOKEN?.trim() ?? '',
+      inboundToken: env.DISCORD_BRIDGE_TOKEN?.trim() ?? '',
+    },
   }
+}
+
+/** A Discord webhook URL without a trailing slash or query, or '' when unset or not one. */
+function webhookUrl(raw: string | undefined): string {
+  const value = raw?.trim() ?? ''
+  return /^https:\/\/(?:\w+\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(value)
+    ? value
+    : ''
 }
 
 /** A non-negative whole number from the environment, or the fallback when unset or not a number. */

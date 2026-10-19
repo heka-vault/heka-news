@@ -11,6 +11,7 @@ import type { Assets } from '../lib/assets.ts'
 import type { DiscordOAuthClient } from '../lib/discord.ts'
 import { CACHE_NONE } from '../lib/http.ts'
 import type { GitHubClient } from '../lib/oauth.ts'
+import type { Outbox } from '../lib/outbox.ts'
 import { csrfTokenValid, sameOrigin } from '../lib/session.ts'
 import type { Fields } from '../lib/validate.ts'
 import type { PageContext, SigninMode, Viewer } from '../views/context.ts'
@@ -36,6 +37,8 @@ export interface Web {
   github: GitHubClient | null
   /** Discord's OAuth endpoints for linking (ADR 0009); null until the app's credentials are set. */
   discord: DiscordOAuthClient | null
+  /** What changed, for the Discord forum (ADR 0009). Records nothing until the webhook is set. */
+  outbox: Outbox
   signin: SigninMode
   ctxOf: (c: C) => PageContext
   html: (c: C, node: Child, status?: HtmlStatus) => Response

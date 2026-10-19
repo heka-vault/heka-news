@@ -61,6 +61,8 @@ export interface CommentNode {
   bodyHtml: string
   deleted: boolean
   removedBy: RemovedBy | null
+  /** Carried in from the Discord forum (ADR 0009). */
+  viaDiscord: boolean
   children: CommentNode[]
 }
 

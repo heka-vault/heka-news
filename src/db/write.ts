@@ -199,6 +199,8 @@ export interface NewComment {
   bodyMd: string
   createdAt?: number
   points?: number
+  /** 'discord' for a message carried in from the forum (ADR 0009). */
+  source?: 'site' | 'discord'
 }
 
 export function createComment(db: Db, comment: NewComment): number {
@@ -241,6 +243,10 @@ export function createComment(db: Db, comment: NewComment): number {
       `${path}${String(row.id).padStart(10, '0')}`,
       row.id,
     )
+    // Set only when not the default, so this also writes under schemas from before 0006.
+    if (comment.source === 'discord') {
+      db.query("UPDATE comments SET source = 'discord' WHERE id = ?").run(row.id)
+    }
     db.query('UPDATE items SET comment_count = comment_count + 1 WHERE id = ?').run(comment.itemId)
     return row.id
   })()

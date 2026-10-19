@@ -1538,7 +1538,8 @@ button.vote__mark {
   color: var(--stop);
 }
 
-.c-edited {
+.c-edited,
+.c-via {
   color: var(--ink-muted);
 }
 

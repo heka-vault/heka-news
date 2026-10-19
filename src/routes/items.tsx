@@ -175,6 +175,7 @@ export function registerItems(app: App, web: Web): void {
       tags: input.tags,
       createdAt: clock(),
     })
+    web.outbox.record('item_created', { itemId: id })
     return c.redirect(`/item/${id}`, 303)
   })
 
@@ -254,6 +255,7 @@ export function registerItems(app: App, web: Web): void {
       { title: result.value.title, bodyMd: result.value.bodyMd, tags: result.value.tags },
       now,
     )
+    web.outbox.record('item_updated', { itemId: item.id })
     return c.redirect(`/item/${item.id}`, 303)
   })
 
@@ -291,7 +293,9 @@ export function registerItems(app: App, web: Web): void {
     const item = liveItem(c)
     if (!item) return web.notFound(c)
     if (item.authorId !== guard.viewer.id) return notYours(c)
-    authorDeleteItem(db, item.id, guard.viewer.id, clock())
+    if (authorDeleteItem(db, item.id, guard.viewer.id, clock())) {
+      web.outbox.record('item_removed', { itemId: item.id })
+    }
     return c.redirect(`/u/${guard.viewer.login}`, 303)
   })
 
@@ -361,6 +365,7 @@ export function registerItems(app: App, web: Web): void {
       bodyMd: result.value,
       createdAt: clock(),
     })
+    web.outbox.record('comment_created', { commentId: id })
     if (wantsJson(c)) {
       const node = commentNode(db, id)
       if (!node) return c.json({ error: 'The comment was saved but could not be shown.' }, 500)
@@ -428,6 +433,7 @@ export function registerItems(app: App, web: Web): void {
     const result = validateComment(fields)
     if (!result.ok) return page({ error: result.errors.body }, 422)
     updateComment(db, comment.id, result.value, now)
+    web.outbox.record('comment_updated', { commentId: comment.id })
     return c.redirect(href, 303)
   })
 
@@ -463,7 +469,9 @@ export function registerItems(app: App, web: Web): void {
     const comment = liveComment(c)
     if (!comment) return web.notFound(c)
     if (comment.authorId !== guard.viewer.id) return notYours(c)
-    authorDeleteComment(db, comment.id, guard.viewer.id, clock())
+    if (authorDeleteComment(db, comment.id, guard.viewer.id, clock())) {
+      web.outbox.record('comment_deleted', { commentId: comment.id })
+    }
     return c.redirect(`/item/${comment.itemId}#comments`, 303)
   })
 

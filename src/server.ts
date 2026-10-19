@@ -8,13 +8,26 @@ import { createApp } from './app.tsx'
 import { loadConfig } from './config.ts'
 import { openDb } from './db/index.ts'
 import { rerenderStale } from './db/write.ts'
+import { createOutbox } from './lib/outbox.ts'
 
 const config = loadConfig()
 const db = openDb(config.databasePath)
 const rerendered = rerenderStale(db)
 if (rerendered > 0) console.log(`re-rendered ${rerendered} rows for the current markdown version`)
 
-const app = createApp({ db, config })
+// The Discord bridge's outbox (ADR 0009): sent right after each change, and every minute for
+// retries and anything left from before a restart.
+const outbox = createOutbox({
+  db,
+  bridge: config.bridge,
+  publicUrl: config.publicUrl,
+  clock: () => Math.floor(Date.now() / 1000),
+  fetch,
+  autoDrain: true,
+})
+if (outbox.enabled) setInterval(() => void outbox.drain(), 60_000)
+
+const app = createApp({ db, config, outbox })
 const server = Bun.serve({ hostname: config.host, port: config.port, fetch: app.fetch })
 console.log(
   `heka news ${config.gitSha} on http://${server.hostname}:${server.port} (${config.databasePath})`,
