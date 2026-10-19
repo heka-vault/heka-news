@@ -5,7 +5,7 @@ import { raw } from 'hono/html'
 import type { Child } from 'hono/jsx'
 import { SITE } from '../../config.ts'
 import type { ScriptName } from '../../lib/assets.ts'
-import { absoluteUrl, type NavKey, type PageContext } from '../context.ts'
+import { absoluteUrl, type NavKey, type PageContext, type Theme } from '../context.ts'
 import { Mark } from './Mark.tsx'
 
 export interface LayoutProps {
@@ -56,6 +56,12 @@ export function jsonLdScript(data: object) {
   return <script type="application/ld+json">{raw(json)}</script>
 }
 
+/** A theme-color meta's media: the system decides, unless the visitor chose a theme. */
+function themeColorMedia(theme: Theme | null, scheme: Theme): string {
+  if (!theme) return `(prefers-color-scheme: ${scheme})`
+  return theme === scheme ? 'all' : 'not all'
+}
+
 export function Layout(props: LayoutProps) {
   const { ctx } = props
   const fullTitle = props.title ? `${props.title} | ${SITE.name}` : SITE.name
@@ -69,13 +75,14 @@ export function Layout(props: LayoutProps) {
   const scripts = [
     ...new Set<ScriptName>([
       'time',
+      'theme',
       ...(viewer ? (['vote'] as const) : []),
       ...(props.scripts ?? []),
     ]),
   ]
 
   return (
-    <html lang="en" dir="ltr">
+    <html lang="en" dir="ltr" data-theme={ctx.theme ?? undefined}>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -83,8 +90,19 @@ export function Layout(props: LayoutProps) {
         <meta name="description" content={description} />
         <link rel="canonical" href={canonical} />
         {props.noindex && <meta name="robots" content="noindex" />}
-        <meta name="theme-color" content="#1f4235" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#1b3a2f" media="(prefers-color-scheme: dark)" />
+        {/* A chosen theme pins the browser chrome to its color; otherwise the system picks. */}
+        <meta
+          name="theme-color"
+          content="#1f4235"
+          media={themeColorMedia(ctx.theme, 'light')}
+          data-scheme="light"
+        />
+        <meta
+          name="theme-color"
+          content="#1b3a2f"
+          media={themeColorMedia(ctx.theme, 'dark')}
+          data-scheme="dark"
+        />
         <meta name="color-scheme" content="light dark" />
         {viewer && <meta name="csrf-token" content={viewer.csrf} />}
         {ctx.assets.preloads.map((href) => (
@@ -179,6 +197,15 @@ export function Layout(props: LayoutProps) {
                 Sign in
               </a>
             )}
+            <button class="bar__theme" type="button" data-theme-toggle hidden>
+              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <path class="bar__theme-moon" d="M16.5 12.3A7 7 0 0 1 7.7 3.5a7 7 0 1 0 8.8 8.8z" />
+                <g class="bar__theme-sun">
+                  <circle cx="10" cy="10" r="3.5" />
+                  <path d="M10 1.5v2.2m0 12.6v2.2M1.5 10h2.2m12.6 0h2.2M4 4l1.6 1.6m8.8 8.8L16 16M4 16l1.6-1.6m8.8-8.8L16 4" />
+                </g>
+              </svg>
+            </button>
           </div>
         </header>
         <main id="main" tabindex={-1}>

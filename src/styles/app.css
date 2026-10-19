@@ -125,9 +125,48 @@ main:has(> .discussion:last-child) {
   white-space: nowrap;
 }
 
+/* The light/dark button: the icon shows the theme it switches to (the moon in light, the sun in
+ * dark). Hidden until src/client/theme.ts runs. */
+.bar__theme {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-left: calc(-1 * var(--space-3));
+  margin-right: calc(-1 * var(--space-2));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--bar-muted);
+  cursor: pointer;
+}
+
+.bar__theme[hidden] {
+  display: none;
+}
+
+.bar__theme svg {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.bar__theme-moon,
+.bar__theme-sun circle {
+  stroke: none;
+}
+
+.bar__theme[data-current="dark"] .bar__theme-moon,
+.bar__theme[data-current="light"] .bar__theme-sun {
+  display: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .bar__nav a:hover,
-  .bar__signin:hover {
+  .bar__signin:hover,
+  .bar__theme:hover {
     color: var(--bar-ink);
   }
 
@@ -138,11 +177,19 @@ main:has(> .discussion:last-child) {
 
 /* Phones: the wordmark and sign-in on the first row, the lists on the second. */
 @media (max-width: 40rem) {
+  /* A tighter gap keeps the theme button on the first row beside a member's "You" and Submit. */
   .bar__inner {
     padding-top: var(--space-2);
+    column-gap: var(--space-3);
   }
 
-  .bar__signin {
+  .bar__theme {
+    margin-left: calc(-1 * var(--space-1));
+  }
+
+  .bar__signin,
+  .bar__member,
+  .bar__theme {
     order: 2;
   }
 

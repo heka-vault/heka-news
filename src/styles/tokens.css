@@ -28,32 +28,33 @@
 :root {
   color-scheme: light dark;
 
-  /* Floor and ink (light) */
-  --bg: #eef0eb;
-  --bg-raised: #f7f8f4;
-  --ink: #16291f;
-  --ink-muted: #4a5b53;
-  --line: rgb(22 41 31 / 0.18);
+  /* Floor and ink. Each color is light-dark(light theme, dark theme); in the dark theme ("night
+   * shift") the floor goes dark green and the panel stays a lighter machine green. */
+  --bg: light-dark(#eef0eb, #0f1916);
+  --bg-raised: light-dark(#f7f8f4, #15221d);
+  --ink: light-dark(#16291f, #e3eae5);
+  --ink-muted: light-dark(#4a5b53, #a2b3aa);
+  --line: light-dark(rgb(22 41 31 / 0.18), rgb(227 234 229 / 0.16));
 
   /* Machine green: the hero panel and the solid button */
-  --panel: #1f4235;
-  --panel-ink: #eef0eb;
-  --panel-muted: #b9cbc1;
-  --tick: #7fa894;
+  --panel: light-dark(#1f4235, #1b3a2f);
+  --panel-ink: light-dark(#eef0eb, #e3eae5);
+  --panel-muted: light-dark(#b9cbc1, #b2c6bb);
+  --tick: light-dark(#7fa894, #6f9a85);
   --tick-read: #c8b6ff;
 
   /* Floor-marking yellow: the route a change travels. Only on the panel (--lane) and for sequence
    * numerals on the floor (--lane-ink). Never a background, never body text. */
   --lane: #f2c744;
-  --lane-ink: #7a5800;
+  --lane-ink: light-dark(#7a5800, #e9c24a);
 
-  --button: #1f4235;
-  --button-ink: #eef0eb;
-  --button-hover: #16291f;
+  --button: light-dark(#1f4235, #b8d6c4);
+  --button-ink: light-dark(#eef0eb, #0f1916);
+  --button-hover: light-dark(#16291f, #e3eae5);
 
   /* Inspection-stamp violet: links, the current page, focus, the reviewed-by-a-person mark */
-  --stamp: #5638b8;
-  --focus: #5638b8;
+  --stamp: light-dark(#5638b8, #b8a4ff);
+  --focus: light-dark(#5638b8, #b8a4ff);
 
   /* Type: Archivo (a grotesque with a width axis) for display and interface, Source Serif 4 for
    * reading. Code falls back to the platform's monospace; no third face is loaded. */
@@ -125,7 +126,7 @@
 
   /* Stop red: a machine's emergency stop. Error text, an over-limit count, the outline of a button
    * that removes or deletes. Never a fill behind text. (docs/design-plan.md, members' screens) */
-  --stop: #a3261c;
+  --stop: light-dark(#a3261c, #ff9d8a);
 
   /* Form fields: the floor's raised paper, a muted rule. */
   --field-bg: var(--bg-raised);
@@ -146,33 +147,14 @@
   --duration-morph: 220ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Night shift: the floor goes dark green, the panel stays a lighter machine green */
-    --bg: #0f1916;
-    --bg-raised: #15221d;
-    --ink: #e3eae5;
-    --ink-muted: #a2b3aa;
-    --line: rgb(227 234 229 / 0.16);
+/* A visitor's choice of theme (the toggle in the bar) overrides the system setting: the
+ * light-dark() values above follow color-scheme. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
 
-    --panel: #1b3a2f;
-    --panel-ink: #e3eae5;
-    --panel-muted: #b2c6bb;
-    --tick: #6f9a85;
-    --tick-read: #c8b6ff;
-
-    --lane: #f2c744;
-    --lane-ink: #e9c24a;
-
-    --button: #b8d6c4;
-    --button-ink: #0f1916;
-    --button-hover: #e3eae5;
-
-    --stamp: #b8a4ff;
-    --focus: #b8a4ff;
-
-    --stop: #ff9d8a;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {

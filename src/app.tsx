@@ -51,7 +51,13 @@ import { registerTalk } from './routes/talk.ts'
 import type { AppEnv, C, HtmlStatus, Web } from './routes/web.ts'
 import { Csrf } from './views/components/Forms.tsx'
 import { WHOS_HERE_LIMIT, WhosHere } from './views/components/WhosHere.tsx'
-import type { NavKey, PageContext, SigninMode } from './views/context.ts'
+import {
+  type NavKey,
+  type PageContext,
+  type SigninMode,
+  THEME_COOKIE,
+  themeOf,
+} from './views/context.ts'
 import { ItemPage } from './views/pages/ItemPage.tsx'
 import { ListPage } from './views/pages/ListPage.tsx'
 import { ModerationPage } from './views/pages/ModerationPage.tsx'
@@ -112,6 +118,7 @@ export function createApp(opts: AppOptions): Hono<AppEnv> {
       signedIn: viewer !== null,
       viewer,
       signin,
+      theme: themeOf(readCookie(c.req.header('cookie'), THEME_COOKIE)),
       votes: { items: new Set(), comments: new Set() },
     }
   }
