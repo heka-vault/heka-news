@@ -1,0 +1,28 @@
+# Forgejo Actions CI: the PR gate. It runs `bun run check`, the same command humans and agents run
+# locally: tsc, biome, `bun test`, and the smoke test that boots the real server on a seeded
+# temporary database and requests every route.
+#
+# Not here: `bun run lighthouse`. It is a speed check, not a gate (CLAUDE.md), and its performance
+# score depends on the CPU it runs on. Run it locally before UI pull requests and note the scores.
+#
+# Runs on the build runner (quotient-developer; heka docs/infrastructure/forgejo-actions-migration.md)
+# in the oven/bun image, with the runner host's bun install cache mounted. No Docker here: the
+# image is built on merge (deploy). No secrets.
+#
+# Branch protection on main requires the status "ci / check (pull_request)".
+name: ci
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: build
+    container:
+      image: docker.io/oven/bun:1.4.2
+      options: --volume /srv/ci-cache/bun:/root/.bun/install/cache
+    steps:
+      - uses: https://data.forgejo.org/actions/checkout@v4
+      - run: bun install --frozen-lockfile
+      - run: bun run check

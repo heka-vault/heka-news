@@ -60,7 +60,7 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 | `docs/talk-agent.md`, `docs/talk-knowledge-base.md` | The ElevenLabs agent's settings, prompt and data collection, and its knowledge base. Copied into the dashboard after a change merges |
 | `scripts/` | `seed.ts` and `seed-data.ts`, `smoke.ts`, `lighthouse.ts`, `serve-seeded.ts`, `screenshots.sh` |
 | `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes, auth (OAuth, sessions, CSRF, invites, dev sign-in), members (posting, edits, votes, flags, limits), moderation, the invite tree in the bar and on the front page |
-| `Dockerfile`, `deploy/prod/compose.yaml`, `.woodpecker/` | The image, the production stack, CI and CD |
+| `Dockerfile`, `deploy/prod/compose.yaml`, `.forgejo/workflows/`, `.woodpecker/scripts/` | The image, the production stack, CI and CD on Forgejo Actions (the scripts directory name predates the move) |
 
 ## Commands
 
@@ -122,8 +122,8 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   handles are fictional; never put a real person in the seed.
 - **This repository is public.** No hostnames, IP addresses, internal machine or project names,
   tokens or private URLs anywhere, except the registry and vault addresses and the stack path in
-  `.woodpecker/` and `deploy/`. No secrets, ever: the CI secrets (`discord_webhook`,
-  `heka_vault_token`) live in Woodpecker, and the site's own (`SESSION_SECRET`,
+  `.forgejo/workflows/`, `.woodpecker/scripts/` and `deploy/`. No secrets, ever: the CI secrets (`DISCORD_WEBHOOK`,
+  `HEKA_VAULT_TOKEN`) live in Forgejo as repo Actions secrets, and the site's own (`SESSION_SECRET`,
   `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ELEVENLABS_API_KEY`, `ELEVENLABS_WEBHOOK_SECRET`,
   `DISCORD_TALK_WEBHOOK`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_FORUM_WEBHOOK`,
   `DISCORD_BOT_TOKEN`, `DISCORD_BRIDGE_TOKEN`) in Heka Vault, fetched at deploy time (ADRs 0007,
@@ -162,7 +162,7 @@ the site, so any number goes stale.
 
 ## Deploy
 
-`main` is production. A push to `main` runs `.woodpecker/deploy.yaml`: build the image tagged with
+`main` is production. A push to `main` runs `.forgejo/workflows/deploy.yaml` (build on the quotient-developer runner, deploy on the videos host): build the image tagged with
 the commit and push it to the LAN registry, copy `deploy/prod/compose.yaml` to the stack
 directory, write `TAG`, fetch the site's secrets from Heka Vault (`heka-news`, `prod`) into a
 mode-600 `vault.env` that compose loads, pull and recreate, and fail unless the container's `/healthz` (checked
@@ -171,5 +171,5 @@ checks `https://news.hekafactory.com/healthz` and only warns on a mismatch, prun
 Discord. A Cloudflare tunnel forwards the domain to `127.0.0.1:3311`. The database is
 `data/heka-news.db` beside the compose file; it is never in the image.
 
-Pull requests to `main` run `.woodpecker/ci.yaml` (`bun run check`). Work happens on branches and
+Pull requests to `main` run `.forgejo/workflows/ci.yaml` (`bun run check`). Work happens on branches and
 merges by pull request on Forgejo; GitHub is a push mirror. Never force-push `main`.

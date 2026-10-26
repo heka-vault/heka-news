@@ -1,0 +1,79 @@
+# Forgejo Actions CD: every push to `main` deploys news.hekafactory.com. Runners: heka
+# documentation/infrastructure/forgejo-actions-migration.md.
+#
+#   build    on the build runner (quotient-developer): .woodpecker/scripts/build-image.sh builds
+#            this commit's image and pushes it to 192.168.5.251:5000, skipping the build when the
+#            tag is already there
+#   deploy   on the videos host as eric (no container): .woodpecker/scripts/deploy.sh fetches Heka
+#            Vault heka-news/prod into a mode-600 vault.env (ADR 0007), copies
+#            deploy/prod/compose.yaml into /home/eric/sites/heka-news, writes TAG, creates data/,
+#            compose pull and up, then waits until the container's /healthz reports this commit;
+#            then prunes old build cache and images, and .woodpecker/scripts/notify.sh posts one
+#            line in the project's Discord channel, pass or fail
+#
+# The videos host has no node and docker:27-cli is Alpine (the runner's node cannot run there),
+# so the build and deploy jobs fetch the commit with git instead of actions/checkout. The scripts
+# read Woodpecker's CI_* names; the env blocks map them.
+#
+# Secrets (repo Actions secrets): DISCORD_WEBHOOK (notify; Heka Vault heka-news/prod),
+# HEKA_VAULT_TOKEN (deploy; the read key "forgejo-actions" for the vault project heka-news). The
+# site's own secrets live in the vault, never in this repository.
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: build
+    container: docker.io/docker:27-cli
+    env:
+      CI_COMMIT_SHA: ${{ forgejo.sha }}
+      DOCKER_BUILDKIT: '1'
+    steps:
+      # docker:27-cli is Alpine; the runner's bundled node (glibc) cannot run there, so no
+      # actions/checkout: fetch the commit with git (in the image) and the run token.
+      - name: fetch
+        env:
+          TOKEN: ${{ forgejo.token }}
+        run: |
+          git init -q
+          git fetch -q --depth 1 "http://x-access-token:${TOKEN}@192.168.5.251:3001/${{ forgejo.repository }}.git" "$CI_COMMIT_SHA"
+          git checkout -q FETCH_HEAD
+      - run: apk add --no-cache curl >/dev/null
+      - run: sh .woodpecker/scripts/build-image.sh heka-news Dockerfile
+
+  deploy:
+    needs: build
+    runs-on: videos
+    env:
+      CI_COMMIT_SHA: ${{ forgejo.sha }}
+      CI_COMMIT_MESSAGE: ${{ forgejo.event.head_commit.message }}
+      CI_PIPELINE_URL: ${{ forgejo.server_url }}/${{ forgejo.repository }}/actions/runs/${{ forgejo.run_number }}
+    steps:
+      - name: fetch
+        env:
+          TOKEN: ${{ forgejo.token }}
+        run: |
+          rm -rf ./* ./.[!.]* 2>/dev/null || true
+          git init -q
+          git fetch -q --depth 1 "http://x-access-token:${TOKEN}@192.168.5.251:3001/${{ forgejo.repository }}.git" "$CI_COMMIT_SHA"
+          git checkout -q FETCH_HEAD
+      - name: deploy
+        env:
+          HEKA_VAULT_URL: http://192.168.4.67:8090
+          HEKA_VAULT_ENV: prod
+          HEKA_VAULT_TOKEN: ${{ secrets.HEKA_VAULT_TOKEN }}
+        run: sh .woodpecker/scripts/deploy.sh
+      - name: cleanup
+        if: always()
+        run: |
+          docker builder prune -af --filter "until=24h"
+          docker image prune -af --filter "until=72h"
+      - name: notify
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          CI_PIPELINE_STATUS: ${{ job.status }}
+        run: sh .woodpecker/scripts/notify.sh
