@@ -11,8 +11,9 @@
 #            then prunes old build cache and images, and .woodpecker/scripts/notify.sh posts one
 #            line in the project's Discord channel, pass or fail
 #
-# The videos host has no node, so the deploy job fetches the commit with git instead of
-# actions/checkout. The scripts read Woodpecker's CI_* names; the env blocks map them.
+# The videos host has no node and docker:27-cli is Alpine (the runner's node cannot run there),
+# so the build and deploy jobs fetch the commit with git instead of actions/checkout. The scripts
+# read Woodpecker's CI_* names; the env blocks map them.
 #
 # Secrets (repo Actions secrets): DISCORD_WEBHOOK (notify; Heka Vault heka-news/prod),
 # HEKA_VAULT_TOKEN (deploy; the read key "forgejo-actions" for the vault project heka-news). The
@@ -31,7 +32,15 @@ jobs:
       CI_COMMIT_SHA: ${{ forgejo.sha }}
       DOCKER_BUILDKIT: '1'
     steps:
-      - uses: https://data.forgejo.org/actions/checkout@v4
+      # docker:27-cli is Alpine; the runner's bundled node (glibc) cannot run there, so no
+      # actions/checkout: fetch the commit with git (in the image) and the run token.
+      - name: fetch
+        env:
+          TOKEN: ${{ forgejo.token }}
+        run: |
+          git init -q
+          git fetch -q --depth 1 "http://x-access-token:${TOKEN}@192.168.5.251:3001/${{ forgejo.repository }}.git" "$CI_COMMIT_SHA"
+          git checkout -q FETCH_HEAD
       - run: apk add --no-cache curl >/dev/null
       - run: sh .woodpecker/scripts/build-image.sh heka-news Dockerfile
 
