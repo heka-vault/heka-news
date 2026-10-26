@@ -60,7 +60,7 @@ until then `/signin` says it opens soon. Locally, with no GitHub app and outside
 | `docs/talk-agent.md`, `docs/talk-knowledge-base.md` | The ElevenLabs agent's settings, prompt and data collection, and its knowledge base. Copied into the dashboard after a change merges |
 | `scripts/` | `seed.ts` and `seed-data.ts`, `smoke.ts`, `lighthouse.ts`, `serve-seeded.ts`, `screenshots.sh` |
 | `test/` | `bun test`: ranking, markdown (XSS), HTTP caching, database, routes, auth (OAuth, sessions, CSRF, invites, dev sign-in), members (posting, edits, votes, flags, limits), moderation, the invite tree in the bar and on the front page |
-| `Dockerfile`, `deploy/prod/compose.yaml`, `.forgejo/workflows/`, `.woodpecker/scripts/` | The image, the production stack, CI and CD on Forgejo Actions (the scripts directory name predates the move) |
+| `Dockerfile`, `deploy/prod/compose.yaml`, `.forgejo/workflows/`, `.forgejo/scripts/` | The image, the production stack, CI and CD on Forgejo Actions |
 
 ## Commands
 
@@ -122,7 +122,7 @@ docker build --build-arg GIT_SHA="$(git rev-parse HEAD)" -t heka-news .
   handles are fictional; never put a real person in the seed.
 - **This repository is public.** No hostnames, IP addresses, internal machine or project names,
   tokens or private URLs anywhere, except the registry and vault addresses and the stack path in
-  `.forgejo/workflows/`, `.woodpecker/scripts/` and `deploy/`. No secrets, ever: the CI secrets (`DISCORD_WEBHOOK`,
+  `.forgejo/workflows/`, `.forgejo/scripts/` and `deploy/`. No secrets, ever: the CI secrets (`DISCORD_WEBHOOK`,
   `HEKA_VAULT_TOKEN`) live in Forgejo as repo Actions secrets, and the site's own (`SESSION_SECRET`,
   `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ELEVENLABS_API_KEY`, `ELEVENLABS_WEBHOOK_SECRET`,
   `DISCORD_TALK_WEBHOOK`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_FORUM_WEBHOOK`,

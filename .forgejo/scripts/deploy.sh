@@ -1,5 +1,5 @@
 #!/bin/sh
-# Deploys this commit to news.hekafactory.com. Woodpecker runs it from .woodpecker/deploy.yaml
+# Deploys this commit to news.hekafactory.com. The deploy job runs it from .forgejo/workflows/deploy.yaml
 # after the image is in the registry, with the stack directory /home/eric/sites/heka-news mounted
 # at the same path and the host's Docker socket. Adapted from heka-site's deploy.sh.
 #
@@ -23,8 +23,8 @@
 # so the script can run against a scratch stack on a workstation.
 #
 #   CI_COMMIT_SHA        required; the image tag
-#   HEKA_VAULT_TOKEN     a read key for the Heka Vault project heka-news (Woodpecker secret
-#                        heka_vault_token). Unset: vault.env is written empty and sign-in stays closed
+#   HEKA_VAULT_TOKEN     a read key for the Heka Vault project heka-news (Forgejo Actions secret
+#                        HEKA_VAULT_TOKEN). Unset: vault.env is written empty and sign-in stays closed
 #   HEKA_VAULT_URL       default http://192.168.4.67:8090
 #   HEKA_VAULT_ENV       default prod
 #   HEKA_NEWS_DIR        default /home/eric/sites/heka-news
@@ -44,7 +44,7 @@ fail() {
   exit 1
 }
 
-# `docker compose` in the stack directory, with stdin detached so it cannot read Woodpecker's step
+# `docker compose` in the stack directory, with stdin detached so it cannot read the job's
 # script.
 compose() {
   (cd "$site_dir" && docker compose "$@" </dev/null)
@@ -55,7 +55,7 @@ show_stack() {
   compose logs --no-color --tail 40 heka-news || true
 }
 
-[ -d "$site_dir" ] || fail "${site_dir} does not exist. The Woodpecker step must mount it (repo Trusted)."
+[ -d "$site_dir" ] || fail "${site_dir} does not exist. The deploy job runs on the videos host, where it exists."
 
 # Files the deploy writes take the stack directory's owner, so eric can read and edit them even
 # though the step runs as root.
@@ -115,7 +115,7 @@ env_tmp="$(mktemp "${site_dir}/.env.XXXXXX")"
 trap 'rm -f "$compose_tmp" "$env_tmp" "$vault_tmp"' EXIT
 cp "${repo_dir}/deploy/prod/compose.yaml" "$compose_tmp"
 {
-  echo "# Written by .woodpecker/scripts/deploy.sh on every deploy. Not secret."
+  echo "# Written by .forgejo/scripts/deploy.sh on every deploy. Not secret."
   echo "TAG=${CI_COMMIT_SHA}"
 } >"$env_tmp"
 place "$compose_tmp" "${site_dir}/compose.yaml"

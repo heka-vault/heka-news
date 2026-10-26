@@ -1,14 +1,14 @@
 # Forgejo Actions CD: every push to `main` deploys news.hekafactory.com. Runners: heka
 # documentation/infrastructure/forgejo-actions-migration.md.
 #
-#   build    on the build runner (quotient-developer): .woodpecker/scripts/build-image.sh builds
+#   build    on the build runner (quotient-developer): .forgejo/scripts/build-image.sh builds
 #            this commit's image and pushes it to 192.168.5.251:5000, skipping the build when the
 #            tag is already there
-#   deploy   on the videos host as eric (no container): .woodpecker/scripts/deploy.sh fetches Heka
+#   deploy   on the videos host as eric (no container): .forgejo/scripts/deploy.sh fetches Heka
 #            Vault heka-news/prod into a mode-600 vault.env (ADR 0007), copies
 #            deploy/prod/compose.yaml into /home/eric/sites/heka-news, writes TAG, creates data/,
 #            compose pull and up, then waits until the container's /healthz reports this commit;
-#            then prunes old build cache and images, and .woodpecker/scripts/notify.sh posts one
+#            then prunes old build cache and images, and .forgejo/scripts/notify.sh posts one
 #            line in the project's Discord channel, pass or fail
 #
 # The videos host has no node and docker:27-cli is Alpine (the runner's node cannot run there),
@@ -42,7 +42,7 @@ jobs:
           git fetch -q --depth 1 "http://x-access-token:${TOKEN}@192.168.5.251:3001/${{ forgejo.repository }}.git" "$CI_COMMIT_SHA"
           git checkout -q FETCH_HEAD
       - run: apk add --no-cache curl >/dev/null
-      - run: sh .woodpecker/scripts/build-image.sh heka-news Dockerfile
+      - run: sh .forgejo/scripts/build-image.sh heka-news Dockerfile
 
   deploy:
     needs: build
@@ -65,7 +65,7 @@ jobs:
           HEKA_VAULT_URL: http://192.168.4.67:8090
           HEKA_VAULT_ENV: prod
           HEKA_VAULT_TOKEN: ${{ secrets.HEKA_VAULT_TOKEN }}
-        run: sh .woodpecker/scripts/deploy.sh
+        run: sh .forgejo/scripts/deploy.sh
       - name: cleanup
         if: always()
         run: |
@@ -76,4 +76,4 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           CI_PIPELINE_STATUS: ${{ job.status }}
-        run: sh .woodpecker/scripts/notify.sh
+        run: sh .forgejo/scripts/notify.sh

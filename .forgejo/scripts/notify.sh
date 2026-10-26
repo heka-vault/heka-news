@@ -1,10 +1,10 @@
 #!/bin/sh
 # Posts one line to the project's Discord channel: this commit's deploy passed or failed. Run by
-# the notify step in .woodpecker/deploy.yaml. Copied from heka-site.
+# the notify step in .forgejo/workflows/deploy.yaml. Copied from heka-site.
 #
-#   DISCORD_WEBHOOK     required; the channel's webhook URL (a Woodpecker secret, never in the repo)
-#   CI_PIPELINE_STATUS  set by Woodpecker: success or failure
-#   CI_COMMIT_SHA, CI_COMMIT_MESSAGE, CI_PIPELINE_URL   set by Woodpecker
+#   DISCORD_WEBHOOK     required; the channel's webhook URL (a Forgejo Actions secret, never in the repo)
+#   CI_PIPELINE_STATUS  set by the workflow: success or failure
+#   CI_COMMIT_SHA, CI_COMMIT_MESSAGE, CI_PIPELINE_URL   set by the workflow
 set -eu
 
 : "${DISCORD_WEBHOOK:?DISCORD_WEBHOOK is not set}"
