@@ -12,5 +12,5 @@ docs
 test
 .agents
 .claude
-.woodpecker
+.forgejo
 scripts

@@ -1,6 +1,6 @@
 # The production stack: /home/eric/sites/heka-news/compose.yaml on the host.
 # Never edit the copy on the server. Every push to `main` copies this file there and deploys it
-# (.forgejo/workflows/deploy.yaml, .woodpecker/scripts/deploy.sh).
+# (.forgejo/workflows/deploy.yaml, .forgejo/scripts/deploy.sh).
 #
 # Beside it on the host:
 #   .env    TAG, the commit whose image is running, written by the deploy. Nothing secret.

@@ -3,7 +3,7 @@
 # heka-site's build-image.sh. Skips the build when the registry already has this commit's tag, so
 # a re-run deploy does not rebuild.
 #
-#   sh .woodpecker/scripts/build-image.sh heka-news Dockerfile
+#   sh .forgejo/scripts/build-image.sh heka-news Dockerfile
 #
 # Needs CI_COMMIT_SHA, a Docker CLI with buildx, curl, and the host's Docker socket. The daemon is
 # the host's, so it pushes to the registry as the host does. Run from the repo root (the build
